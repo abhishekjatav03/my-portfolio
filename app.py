@@ -108,6 +108,15 @@ st.markdown("""
         color: black;
         box-shadow: 0 0 20px #00f260;
     }
+
+    /* FIX: Make Metrics Bright Green & Visible */
+    div[data-testid="stMetricValue"] {
+        color: #00f260 !important;
+        text-shadow: 0 0 10px #00f260;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: white !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -154,7 +163,7 @@ if selected == "Neural Core":
         c2.metric("Projects Deployed", "5+")
 
     with col2:
-        # HERE IS THE AI 3D OPTION
+        # HERE IS THE AI 3D OPTION (Interactive)
         st.plotly_chart(create_3d_network(), use_container_width=True)
         st.caption("Interact: Drag to rotate the Neural Network")
 
@@ -167,7 +176,7 @@ elif selected == "Mission Control":
     with tab1:
         st.markdown("<div class='glass-box'>", unsafe_allow_html=True)
         st.write("Initializing Power BI Interface...")
-        # Replace Link
+        # Replace Link Here
         link = "https://app.powerbi.com/view?r=eyJrIjoiNzY3NTI5N2EtOWE1OS00MzM2LWI3ZDgtN2Q4ZGI5ZGI5ZGI5IiwidCI6IjZkODg4ODg4LWI3ZDgtN2Q4ZGI5ZGI5ZGI5In0%3D"
         components.iframe(link, width=1000, height=550)
         st.markdown("</div>", unsafe_allow_html=True)
@@ -232,6 +241,6 @@ elif selected == "Comm-Link":
         <h3>📍 LOCATE OPERATIVE</h3>
         <p>> STATUS: ONLINE</p>
         <p>> LOCATION: INDORE, INDIA</p>
-        <p>> EMAIL: abhishek@email.com</p>
+        <p>> EMAIL: abhishek@example.com</p>
         </div>
         """, unsafe_allow_html=True)
