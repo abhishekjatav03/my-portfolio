@@ -47,8 +47,8 @@ def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
 users_db = {
-    "manager": {"name": "Abhishek Jatav", "role": "Admin", "password": make_hashes("admin123")},
-    "cashier1": {"name": "Rahul Sharma", "role": "Staff", "password": make_hashes("staff123")}
+    "manager": {"name": "Abhishek Jatav", "role": "abhishek", "password": make_hashes("abhi123")},
+    "cashier1": {"name": "Rahul Sharma", "role": "krishna", "password": make_hashes("Rsoft123")}
 }
 
 def get_product_details(name):
