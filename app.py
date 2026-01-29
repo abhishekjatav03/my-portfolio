@@ -46,9 +46,10 @@ def make_hashes(password):
 def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
+# --- 🔑 USER ID & PASSWORD SETTINGS ---
 users_db = {
-    "manager": {"name": "Abhishek Jatav", "role": "abhishek", "password": make_hashes("abhi123")},
-    "cashier1": {"name": "Rahul Sharma", "role": "krishna", "password": make_hashes("Rsoft123")}
+    "abhishek": {"name": "Abhishek Jatav", "role": "Admin", "password": make_hashes("12345")},
+    "rahul": {"name": "Rahul Sharma", "role": "Staff", "password": make_hashes("12345")}
 }
 
 def get_product_details(name):
@@ -100,7 +101,7 @@ def process_transaction(discount_amt, subtotal_amt, tax_amt, grand_total_amt):
     st.session_state.sales_history.append(sale_record)
     return bill_id
 
-# --- 4. LOGIN PAGE (FIXED CODE HERE) ---
+# --- 4. LOGIN PAGE ---
 def login_page():
     st.markdown("<h1 style='text-align:center; color:#0071ce;'>🏢 ABHI_NEW_MART-1.0</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>System Time: {datetime.now().strftime('%d-%b-%Y | %I:%M %p')}</p>", unsafe_allow_html=True)
@@ -111,14 +112,13 @@ def login_page():
         st.caption("Secure AI-Powered Retail Environment")
         
     with c2:
-        # --- FIX: Added st.form() wrapper here ---
         with st.container(border=True):
             with st.form("login_form"): 
                 st.subheader("System Login")
+                st.info("Try User: abhishek | Pass: 12345") # Hint for easy login
                 user = st.text_input("Username")
                 pwd = st.text_input("Password", type="password")
                 
-                # Now st.form_submit_button is inside st.form, so NO ERROR
                 submitted = st.form_submit_button("🔒 Authenticate")
                 
                 if submitted:
