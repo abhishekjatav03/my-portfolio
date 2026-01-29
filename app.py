@@ -1,246 +1,311 @@
 import streamlit as st
-from streamlit_option_menu import option_menu
-import streamlit.components.v1 as components
-import plotly.graph_objects as go
-import pandas as pd
-import numpy as np
+import hashlib
 import time
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import numpy as np
+from datetime import datetime
 
-# --- 1. PAGE CONFIGURATION ---
-st.set_page_config(
-    page_title="Abhishek Jatav | AI Architect",
-    page_icon="🧠",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+# --- 1. CONFIGURATION & REBRANDING ---
+st.set_page_config(page_title="ABHI_NEW_MART-1.0 | Enterprise System", page_icon="🏢", layout="wide")
 
-# --- 2. 3D AI BRAIN FUNCTION (Pure Python - No Internet Needed) ---
-def create_3d_network():
-    # Generate random 3D coordinates for a "Neural Network" look
-    N = 100
-    x = np.random.randn(N)
-    y = np.random.randn(N)
-    z = np.random.randn(N)
-    
-    # Create Lines (Connections)
-    edge_x = []
-    edge_y = []
-    edge_z = []
-    for i in range(N):
-        for j in range(i+1, N):
-            if np.random.rand() > 0.98: # Connect random nodes
-                edge_x.extend([x[i], x[j], None])
-                edge_y.extend([y[i], y[j], None])
-                edge_z.extend([z[i], z[j], None])
+# --- 2. DATA & SESSION STATE SETUP ---
+# Inventory
+if 'inventory' not in st.session_state:
+    st.session_state.inventory = [
+        {"ID": 101, "Product": "Nike Air Jordan", "Category": "Footwear", "Price": 12000, "Stock": 10},
+        {"ID": 102, "Product": "Adidas Ultraboost", "Category": "Footwear", "Price": 15000, "Stock": 15},
+        {"ID": 103, "Product": "Apple iPhone 15", "Category": "Electronics", "Price": 80000, "Stock": 5},
+        {"ID": 104, "Product": "Samsung S24 Ultra", "Category": "Electronics", "Price": 110000, "Stock": 8},
+        {"ID": 105, "Product": "Levi's Denim Jacket", "Category": "Apparel", "Price": 4500, "Stock": 25},
+    ]
 
-    # 3D Traces
-    edge_trace = go.Scatter3d(
-        x=edge_x, y=edge_y, z=edge_z,
-        mode='lines',
-        line=dict(color='#00f260', width=1), # Neon Green Lines
-        hoverinfo='none'
-    )
+# Customer CRM
+if 'customers' not in st.session_state:
+    st.session_state.customers = {
+        "9876543210": {"Name": "Amit Kumar", "Points": 150, "Total Spent": 12000},
+        "9988776655": {"Name": "Priya Singh", "Points": 40, "Total Spent": 3500}
+    }
 
-    node_trace = go.Scatter3d(
-        x=x, y=y, z=z,
-        mode='markers',
-        marker=dict(
-            size=5,
-            color=z,
-            colorscale='Viridis',
-            opacity=0.8
-        )
-    )
+# Coupons
+coupons = {
+    "WELCOME10": 0.10,  "VIP20": 0.20, "FLAT500": 500
+}
 
-    fig = go.Figure(data=[edge_trace, node_trace])
-    fig.update_layout(
-        scene=dict(
-            xaxis=dict(showbackground=False, showticklabels=False, title=''),
-            yaxis=dict(showbackground=False, showticklabels=False, title=''),
-            zaxis=dict(showbackground=False, showticklabels=False, title=''),
-            bgcolor='rgba(0,0,0,0)'
-        ),
-        paper_bgcolor='rgba(0,0,0,0)',
-        margin=dict(l=0, r=0, b=0, t=0),
-        showlegend=False
-    )
+# Session Variables
+if 'cart' not in st.session_state: st.session_state.cart = []
+if 'sales_history' not in st.session_state: st.session_state.sales_history = []
+if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+if 'current_customer' not in st.session_state: st.session_state.current_customer = None
+
+# --- 3. HELPER FUNCTIONS & 3D VISUALS ---
+def make_hashes(password):
+    return hashlib.sha256(str.encode(password)).hexdigest()
+
+def check_hashes(password, hashed_text):
+    return make_hashes(password) == hashed_text
+
+users_db = {
+    "manager": {"name": "Abhishek Jatav", "role": "Admin", "password": make_hashes("admin123")},
+    "cashier1": {"name": "Rahul Sharma", "role": "Staff", "password": make_hashes("staff123")}
+}
+
+def get_product_details(name):
+    for item in st.session_state.inventory:
+        if item["Product"] == name: return item
+    return None
+
+# --- 3D AI Visual Generator ---
+def get_3d_ai_visual():
+    df_3d = pd.DataFrame(np.random.randn(200, 3), columns=['X', 'Y', 'Z'])
+    fig = px.scatter_3d(df_3d, x='X', y='Y', z='Z', color='Z', opacity=0.6, 
+                        color_continuous_scale='Viridis')
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0), 
+                      scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False)),
+                      paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=300)
     return fig
 
-# --- 3. CUSTOM CSS (Cyberpunk Style) ---
-st.markdown("""
-<style>
-    /* Dark Sci-Fi Background */
-    .stApp {
-        background-color: #050505;
-        background-image: radial-gradient(#111 1px, transparent 1px);
-        background-size: 20px 20px;
-        color: white;
-        font-family: 'Courier New', monospace;
-    }
-    
-    /* Neon Headings */
-    h1 {
-        text-shadow: 0 0 10px #00f260, 0 0 20px #00f260;
-        color: #fff !important;
-    }
-    
-    /* Glass Cards */
-    .glass-box {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(0, 242, 96, 0.3);
-        box-shadow: 0 0 15px rgba(0, 242, 96, 0.1);
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        backdrop-filter: blur(5px);
-    }
-    
-    /* Custom Buttons */
-    .stButton>button {
-        background: black;
-        border: 1px solid #00f260;
-        color: #00f260;
-        border-radius: 5px;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        background: #00f260;
-        color: black;
-        box-shadow: 0 0 20px #00f260;
-    }
+# --- TRANSACTION PROCESSING ---
+def process_transaction(discount_amt, subtotal_amt, tax_amt, grand_total_amt):
+    bill_id = f"INV-{int(time.time())}"
+    current_dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    /* FIX: Make Metrics Bright Green & Visible */
-    div[data-testid="stMetricValue"] {
-        color: #00f260 !important;
-        text-shadow: 0 0 10px #00f260;
+    for cart_item in st.session_state.cart:
+        for inventory_item in st.session_state.inventory:
+            if inventory_item["Product"] == cart_item["Item"]:
+                inventory_item["Stock"] -= cart_item["Qty"]
+    
+    cust_name = "Guest"
+    phone = "N/A"
+    if st.session_state.current_customer:
+        phone = st.session_state.current_customer
+        points_earned = int((grand_total_amt) / 100)
+        st.session_state.customers[phone]["Points"] += points_earned
+        st.session_state.customers[phone]["Total Spent"] += grand_total_amt
+        cust_name = st.session_state.customers[phone]["Name"]
+
+    sale_record = {
+        "Bill ID": bill_id,
+        "Date Time": current_dt,
+        "Customer": cust_name,
+        "Phone": phone,
+        "Subtotal": subtotal_amt,
+        "Discount": discount_amt,
+        "Tax": tax_amt,
+        "Grand Total": grand_total_amt,
+        "Cashier": st.session_state.get('user_name', 'Unknown'),
+        "Items Detail": st.session_state.cart.copy()
     }
-    div[data-testid="stMetricLabel"] {
-        color: white !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+    st.session_state.sales_history.append(sale_record)
+    return bill_id
 
-# --- 4. NAVIGATION ---
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/924/924915.png", width=80)
-    st.markdown("### SYSTEM: ONLINE")
-    st.markdown("USER: **ABHISHEK JATAV**")
+# --- 4. LOGIN PAGE (FIXED CODE HERE) ---
+def login_page():
+    st.markdown("<h1 style='text-align:center; color:#0071ce;'>🏢 ABHI_NEW_MART-1.0</h1>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align:center;'>System Time: {datetime.now().strftime('%d-%b-%Y | %I:%M %p')}</p>", unsafe_allow_html=True)
     
-    selected = option_menu(
-        menu_title=None,
-        options=["Neural Core", "Mission Control", "Data Uplink", "Comm-Link"],
-        icons=["cpu", "activity", "database", "wifi"],
-        default_index=0,
-        styles={
-            "container": {"background-color": "black"},
-            "icon": {"color": "#00f260"}, 
-            "nav-link": {"color": "white"},
-            "nav-link-selected": {"background-color": "#1a1a1a", "border-left": "3px solid #00f260"},
-        }
-    )
-
-# --- 5. PAGE LOGIC ---
-
-# === HOME (NEURAL CORE) ===
-if selected == "Neural Core":
-    col1, col2 = st.columns([1, 1.5])
-    
-    with col1:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown("<h1>ABHISHEK JATAV</h1>", unsafe_allow_html=True)
-        st.markdown("<h3 style='color:#00f260;'>>> AI & DATA ANALYTICS OPERATIVE</h3>", unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div class='glass-box'>
-        <b>SYSTEM STATUS:</b> READY<br>
-        <b>CURRENT OBJECTIVE:</b> Solving complex data problems.<br>
-        <b>TOOLS:</b> Python, SQL, 3D Visualization.
-        </div>
-        """, unsafe_allow_html=True)
-        
-        c1, c2 = st.columns(2)
-        c1.metric("Processing Power", "100%")
-        c2.metric("Projects Deployed", "5+")
-
-    with col2:
-        # HERE IS THE AI 3D OPTION (Interactive)
-        st.plotly_chart(create_3d_network(), use_container_width=True)
-        st.caption("Interact: Drag to rotate the Neural Network")
-
-# === PROJECTS (MISSION CONTROL) ===
-elif selected == "Mission Control":
-    st.title("🚀 MISSION CONTROL (DASHBOARDS)")
-    
-    tab1, tab2 = st.tabs(["[SECURE] SALES DATA", "[PUBLIC] TABLEAU"])
-    
-    with tab1:
-        st.markdown("<div class='glass-box'>", unsafe_allow_html=True)
-        st.write("Initializing Power BI Interface...")
-        # Replace Link Here
-        link = "https://app.powerbi.com/view?r=eyJrIjoiNzY3NTI5N2EtOWE1OS00MzM2LWI3ZDgtN2Q4ZGI5ZGI5ZGI5IiwidCI6IjZkODg4ODg4LWI3ZDgtN2Q4ZGI5ZGI5ZGI5In0%3D"
-        components.iframe(link, width=1000, height=550)
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-    with tab2:
-        st.markdown("<div class='glass-box'>", unsafe_allow_html=True)
-        st.write("Fetching Tableau Visuals...")
-        link_tab = "https://public.tableau.com/views/Superstore_24/Overview?:showVizHome=no&:embed=true"
-        components.iframe(link_tab, width=1000, height=550)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-# === SKILLS (DATA UPLINK) ===
-elif selected == "Data Uplink":
-    st.title("📡 DATA UPLINK (SKILLS)")
-    
-    c1, c2, c3 = st.columns(3)
-    
+    c1, c2 = st.columns([1.5, 1])
     with c1:
-        st.markdown("<div class='glass-box'><h3>🐍 PYTHON</h3><p>Automation & AI</p></div>", unsafe_allow_html=True)
+        st.plotly_chart(get_3d_ai_visual(), use_container_width=True)
+        st.caption("Secure AI-Powered Retail Environment")
+        
     with c2:
-        st.markdown("<div class='glass-box'><h3>🗄️ SQL</h3><p>Database Architecture</p></div>", unsafe_allow_html=True)
-    with c3:
-        st.markdown("<div class='glass-box'><h3>📊 POWER BI</h3><p>Visual Intelligence</p></div>", unsafe_allow_html=True)
+        # --- FIX: Added st.form() wrapper here ---
+        with st.container(border=True):
+            with st.form("login_form"): 
+                st.subheader("System Login")
+                user = st.text_input("Username")
+                pwd = st.text_input("Password", type="password")
+                
+                # Now st.form_submit_button is inside st.form, so NO ERROR
+                submitted = st.form_submit_button("🔒 Authenticate")
+                
+                if submitted:
+                    if user in users_db and check_hashes(pwd, users_db[user]['password']):
+                        st.session_state.logged_in = True
+                        st.session_state.user_role = users_db[user]['role']
+                        st.session_state.user_name = users_db[user]['name']
+                        st.rerun()
+                    else:
+                        st.error("Invalid Access Credentials.")
 
-    # 3D Bar Chart for Skills
-    st.subheader("Skill Proficiency Matrix")
-    langs = ['Python', 'SQL', 'Tableau', 'Excel']
-    level = [90, 85, 80, 95]
-    
-    fig_bar = go.Figure(data=[go.Bar(
-        x=langs, y=level,
-        marker_color=['#00f260', '#0575E6', '#e74c3c', '#f1c40f']
-    )])
-    fig_bar.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font_color='white'
-    )
-    st.plotly_chart(fig_bar, use_container_width=True)
-
-# === CONTACT (COMM-LINK) ===
-elif selected == "Comm-Link":
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.title("📞 ESTABLISH COMM-LINK")
-        with st.form("hacker_form"):
-            st.write("Enter Transmission Details:")
-            name = st.text_input("Identity")
-            msg = st.text_area("Encrypted Message")
+# --- 5. MAIN APPLICATION ---
+def main_app():
+    with st.sidebar:
+        st.markdown(f"## 🕒 {datetime.now().strftime('%I:%M %p')}")
+        st.caption(f"📅 {datetime.now().strftime('%d-%B-%Y')}")
+        st.divider()
+        st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
+        st.write(f"User: **{st.session_state.user_name}**")
+        st.caption(f"Role: {st.session_state.user_role}")
+        
+        menu = ["POS Terminal", "CRM (Customers)", "Inventory", "Analytics & Search"]
+        if st.session_state.user_role == "Staff":
+            menu = ["POS Terminal", "CRM (Customers)", "Inventory"]
             
-            if st.form_submit_button("TRANSMIT DATA"):
-                with st.spinner("Encrypting & Sending..."):
-                    time.sleep(1)
-                    st.success("TRANSMISSION RECEIVED.")
-                    st.balloons()
-    
-    with col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown("""
-        <div class='glass-box'>
-        <h3>📍 LOCATE OPERATIVE</h3>
-        <p>> STATUS: ONLINE</p>
-        <p>> LOCATION: INDORE, INDIA</p>
-        <p>> EMAIL: abhishek@example.com</p>
-        </div>
-        """, unsafe_allow_html=True)
+        choice = st.radio("Navigation", menu)
+        st.divider()
+        if st.button("🔴 Log Out"):
+            st.session_state.logged_in = False
+            st.rerun()
+
+    if choice == "POS Terminal":
+        c_head_1, c_head_2 = st.columns([3, 1])
+        c_head_1.title("🛒 POS Billing")
+        c_head_2.markdown(f"**Date:** {datetime.now().strftime('%d-%m-%Y')}")
+        
+        with st.container(border=True):
+            c1, c2, c3 = st.columns([2, 1, 1])
+            phone_input = c1.text_input("📞 Customer Phone (Optional)", placeholder="Enter 10-digit number")
+            if c2.button("Find Customer"):
+                if phone_input in st.session_state.customers:
+                    cust = st.session_state.customers[phone_input]
+                    st.session_state.current_customer = phone_input
+                    c3.success(f"Verified: {cust['Name']}")
+                    c3.caption(f"Points: {cust['Points']}")
+                else:
+                    st.session_state.current_customer = None
+                    c3.warning("New Customer")
+                    if c2.button("Register New"):
+                        st.session_state.customers[phone_input] = {"Name": "New User", "Points": 0, "Total Spent": 0}
+                        st.success("Registered!")
+
+        col_left, col_right = st.columns([1, 1.2])
+
+        with col_left:
+            st.subheader("Scan Items")
+            product_list = [p["Product"] for p in st.session_state.inventory]
+            selected_product = st.selectbox("Select Product", product_list)
+            details = get_product_details(selected_product)
+            st.info(f"Price: ₹{details['Price']} | Stock: {details['Stock']}")
+            qty = st.number_input("Qty", min_value=1, value=1)
+            if st.button("➕ Add to Cart", type="primary", use_container_width=True):
+                if qty <= details['Stock']:
+                    total = qty * details['Price']
+                    st.session_state.cart.append({"Item": selected_product, "Qty": qty, "Price": details['Price'], "Total": total})
+                    st.toast("Item Added!")
+                else: st.error("❌ Out of Stock!")
+
+        with col_right:
+            st.subheader("🧾 Receipt Preview")
+            st.caption(f"Invoice Time: {datetime.now().strftime('%I:%M %p')}")
+            if st.session_state.cart:
+                df_cart = pd.DataFrame(st.session_state.cart)
+                st.dataframe(df_cart, hide_index=True, use_container_width=True)
+                
+                subtotal = df_cart['Total'].sum()
+                coupon_code = st.text_input("🎟️ Apply Coupon")
+                discount = 0
+                if coupon_code and coupon_code in coupons:
+                    val = coupons[coupon_code]
+                    discount = subtotal * val if val < 1 else val
+                    st.caption(f"Coupon Applied: -₹{discount}")
+
+                use_points = st.checkbox("Redeem Points?")
+                points_discount = 0
+                if use_points and st.session_state.current_customer:
+                    avail = st.session_state.customers[st.session_state.current_customer]["Points"]
+                    points_discount = min(avail, subtotal - discount)
+                    st.caption(f"Points Redeemed: -₹{points_discount}")
+
+                total_discount = discount + points_discount
+                tax = (subtotal - total_discount) * 0.18
+                grand_total = (subtotal - total_discount) + tax
+
+                st.divider()
+                r1, r2 = st.columns(2)
+                r1.markdown(f"Subtotal: ₹{subtotal}")
+                r1.markdown(f"Discount: -₹{total_discount}")
+                r1.markdown(f"GST (18%): ₹{tax:.2f}")
+                r2.markdown(f"### Total: ₹{grand_total:.2f}")
+                
+                if r2.button("✅ CHECKOUT & PRINT", type="primary"):
+                    with st.spinner("Processing Transaction..."):
+                        time.sleep(1)
+                        if use_points and st.session_state.current_customer:
+                            st.session_state.customers[st.session_state.current_customer]["Points"] -= int(points_discount)
+                        
+                        new_bill_id = process_transaction(total_discount, subtotal, tax, grand_total)
+                        st.session_state.cart = []
+                        st.session_state.current_customer = None
+                        st.balloons()
+                        st.success(f"Transaction Successful! Bill No: {new_bill_id}")
+                        time.sleep(3)
+                        st.rerun()
+
+    elif choice == "CRM (Customers)":
+        st.title("👥 Customer Database")
+        st.write(f"As on: {datetime.now().strftime('%d-%b-%Y %I:%M %p')}")
+        crm_data = []
+        for phone, data in st.session_state.customers.items():
+            row = data.copy()
+            row['Phone'] = phone
+            crm_data.append(row)
+        st.dataframe(pd.DataFrame(crm_data), use_container_width=True)
+
+    elif choice == "Inventory":
+        st.title("📦 Warehouse Stock")
+        st.caption(f"Last Updated: {datetime.now().strftime('%I:%M %p')}")
+        df_inv = pd.DataFrame(st.session_state.inventory)
+        c1, c2 = st.columns(2)
+        c1.metric("Total SKU Count", len(df_inv))
+        c2.metric("⚠️ Low Stock Alerts", len(df_inv[df_inv['Stock'] < 5]), delta_color="inverse")
+        st.dataframe(df_inv.style.map(lambda x: 'background-color: #ffcccc' if x < 5 else '', subset=['Stock']), use_container_width=True)
+
+    elif choice == "Analytics & Search":
+        st.title("📈 Analytics & Records")
+        st.caption(f"Report Time: {datetime.now().strftime('%d-%b-%Y %I:%M %p')}")
+        
+        tab1, tab2 = st.tabs(["📊 Sales Report", "🔍 Search Old Bill"])
+        
+        with tab1:
+            if not st.session_state.sales_history:
+                st.info("No sales data available.")
+            else:
+                df_sales = pd.DataFrame(st.session_state.sales_history)
+                k1, k2, k3 = st.columns(3)
+                k1.metric("Total Revenue", f"₹{df_sales['Grand Total'].sum():,.2f}")
+                k2.metric("Total Discounts", f"₹{df_sales['Discount'].sum():,.2f}")
+                k3.metric("Total Bills", len(df_sales))
+                st.subheader("Transaction Log")
+                st.dataframe(df_sales[['Bill ID', 'Date Time', 'Customer', 'Grand Total']], use_container_width=True)
+                
+                c1, c2 = st.columns(2)
+                c1.plotly_chart(get_3d_ai_visual(), use_container_width=True)
+                c2.caption("AI Sales Trend Analysis (Visual Placeholder)")
+
+        with tab2:
+            st.subheader("Find Past Invoice")
+            search_bill_no = st.text_input("Enter Bill No. (e.g., INV-169...)")
+            if st.button("🔍 Search Bill"):
+                found_bill = None
+                for bill in st.session_state.sales_history:
+                    if bill['Bill ID'] == search_bill_no:
+                        found_bill = bill
+                        break
+                
+                if found_bill:
+                    st.success(f"Bill Found: {found_bill['Bill ID']}")
+                    with st.container(border=True):
+                        st.markdown(f"### 🧾 INVOICE REPRINT")
+                        st.write(f"**Date:** {found_bill['Date Time']}")
+                        st.write(f"**Customer:** {found_bill['Customer']} ({found_bill['Phone']})")
+                        st.write(f"**Cashier:** {found_bill['Cashier']}")
+                        st.divider()
+                        st.write("**Items Purchased:**")
+                        st.dataframe(pd.DataFrame(found_bill['Items Detail']), hide_index=True)
+                        st.divider()
+                        b1, b2 = st.columns(2)
+                        b1.write(f"Subtotal: ₹{found_bill['Subtotal']}")
+                        b1.write(f"Discount: -₹{found_bill['Discount']}")
+                        b1.write(f"Tax: ₹{found_bill['Tax']:.2f}")
+                        b2.markdown(f"### Grand Total: ₹{found_bill['Grand Total']:.2f}")
+                else:
+                    st.error("Bill not found in records.")
+
+# Run Logic
+if st.session_state.logged_in:
+    main_app()
+else:
+    login_page()
