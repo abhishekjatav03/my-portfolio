@@ -1,7 +1,4 @@
 streamlit
-streamlit-option-menu
-plotly
 pandas
-numpy
-requests
-streamlit-lottie
+plotly
+google-generativeai

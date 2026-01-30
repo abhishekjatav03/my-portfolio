@@ -1,311 +1,289 @@
 import streamlit as st
-import hashlib
-import time
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-import numpy as np
 from datetime import datetime
+import time
+import random
 
-# --- 1. CONFIGURATION & REBRANDING ---
-st.set_page_config(page_title="ABHI_NEW_MART-1.0 | Enterprise System", page_icon="🏢", layout="wide")
+# ==========================================
+# 1. PAGE CONFIGURATION
+# ==========================================
+st.set_page_config(
+    page_title="Luxora By ABHISHEK",
+    page_icon="💎",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# --- 2. DATA & SESSION STATE SETUP ---
-# Inventory
-if 'inventory' not in st.session_state:
-    st.session_state.inventory = [
-        {"ID": 101, "Product": "Nike Air Jordan", "Category": "Footwear", "Price": 12000, "Stock": 10},
-        {"ID": 102, "Product": "Adidas Ultraboost", "Category": "Footwear", "Price": 15000, "Stock": 15},
-        {"ID": 103, "Product": "Apple iPhone 15", "Category": "Electronics", "Price": 80000, "Stock": 5},
-        {"ID": 104, "Product": "Samsung S24 Ultra", "Category": "Electronics", "Price": 110000, "Stock": 8},
-        {"ID": 105, "Product": "Levi's Denim Jacket", "Category": "Apparel", "Price": 4500, "Stock": 25},
-    ]
-
-# Customer CRM
-if 'customers' not in st.session_state:
-    st.session_state.customers = {
-        "9876543210": {"Name": "Amit Kumar", "Points": 150, "Total Spent": 12000},
-        "9988776655": {"Name": "Priya Singh", "Points": 40, "Total Spent": 3500}
-    }
-
-# Coupons
-coupons = {
-    "WELCOME10": 0.10,  "VIP20": 0.20, "FLAT500": 500
-}
-
-# Session Variables
-if 'cart' not in st.session_state: st.session_state.cart = []
-if 'sales_history' not in st.session_state: st.session_state.sales_history = []
-if 'logged_in' not in st.session_state: st.session_state.logged_in = False
-if 'current_customer' not in st.session_state: st.session_state.current_customer = None
-
-# --- 3. HELPER FUNCTIONS & 3D VISUALS ---
-def make_hashes(password):
-    return hashlib.sha256(str.encode(password)).hexdigest()
-
-def check_hashes(password, hashed_text):
-    return make_hashes(password) == hashed_text
-
-# --- 🔑 USER ID & PASSWORD SETTINGS ---
-users_db = {
-    "abhishek": {"name": "Abhishek Jatav", "role": "Admin", "password": make_hashes("12345")},
-    "rahul": {"name": "Rahul Sharma", "role": "Staff", "password": make_hashes("12345")}
-}
-
-def get_product_details(name):
-    for item in st.session_state.inventory:
-        if item["Product"] == name: return item
-    return None
-
-# --- 3D AI Visual Generator ---
-def get_3d_ai_visual():
-    df_3d = pd.DataFrame(np.random.randn(200, 3), columns=['X', 'Y', 'Z'])
-    fig = px.scatter_3d(df_3d, x='X', y='Y', z='Z', color='Z', opacity=0.6, 
-                        color_continuous_scale='Viridis')
-    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0), 
-                      scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False)),
-                      paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=300)
-    return fig
-
-# --- TRANSACTION PROCESSING ---
-def process_transaction(discount_amt, subtotal_amt, tax_amt, grand_total_amt):
-    bill_id = f"INV-{int(time.time())}"
-    current_dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    for cart_item in st.session_state.cart:
-        for inventory_item in st.session_state.inventory:
-            if inventory_item["Product"] == cart_item["Item"]:
-                inventory_item["Stock"] -= cart_item["Qty"]
+# ==========================================
+# 2. GLOBAL STYLES (Luxury 3D)
+# ==========================================
+st.markdown("""
+<style>
+    .stApp { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); font-family: 'Helvetica Neue', sans-serif; }
+    [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid rgba(0,0,0,0.1); }
     
-    cust_name = "Guest"
-    phone = "N/A"
-    if st.session_state.current_customer:
-        phone = st.session_state.current_customer
-        points_earned = int((grand_total_amt) / 100)
-        st.session_state.customers[phone]["Points"] += points_earned
-        st.session_state.customers[phone]["Total Spent"] += grand_total_amt
-        cust_name = st.session_state.customers[phone]["Name"]
-
-    sale_record = {
-        "Bill ID": bill_id,
-        "Date Time": current_dt,
-        "Customer": cust_name,
-        "Phone": phone,
-        "Subtotal": subtotal_amt,
-        "Discount": discount_amt,
-        "Tax": tax_amt,
-        "Grand Total": grand_total_amt,
-        "Cashier": st.session_state.get('user_name', 'Unknown'),
-        "Items Detail": st.session_state.cart.copy()
+    /* 3D Sidebar Avatar */
+    .avatar-3d {
+        display: block; margin-left: auto; margin-right: auto; width: 130px; height: 130px;
+        border-radius: 50%; object-fit: cover; box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        border: 4px solid #00d2ff; transition: transform 0.3s;
     }
-    st.session_state.sales_history.append(sale_record)
-    return bill_id
+    .avatar-3d:hover { transform: scale(1.05); }
 
-# --- 4. LOGIN PAGE ---
+    /* Pulsing Green Dot */
+    .online-indicator {
+        height: 15px; width: 15px; background-color: #00ff88; border-radius: 50%;
+        display: inline-block; animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
+    }
+
+    /* Highlight Box */
+    .highlight-box { padding: 15px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; text-align: center; }
+    .deleted { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+    .updated { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+
+    h1 {
+        background: -webkit-linear-gradient(45deg, #007bff, #00d2ff);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800 !important;
+    }
+    
+    /* Bill Layout */
+    .bill-container {
+        background: white; padding: 30px; border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 1px solid #eee;
+    }
+    .bill-header { text-align: center; border-bottom: 2px dashed #ddd; padding-bottom: 20px; margin-bottom: 20px; }
+    .bill-total { text-align: right; margin-top: 20px; padding-top: 10px; border-top: 2px solid #333; }
+</style>
+""", unsafe_allow_html=True)
+
+# ==========================================
+# 3. DATABASE
+# ==========================================
+if 'users' not in st.session_state:
+    st.session_state.users = {"admin": {"password": "123", "name": "Abhishek Jatav", "role": "Admin"}}
+if 'logged_in_user' not in st.session_state:
+    st.session_state.logged_in_user = None
+if 'expenses' not in st.session_state:
+    st.session_state.expenses = pd.DataFrame([
+        {"ID": "TXN-1001", "Date": "2026-01-20", "Category": "Food", "Amount": 450, "User": "Abhishek Jatav", "Note": "Lunch"},
+        {"ID": "TXN-1002", "Date": "2026-01-22", "Category": "Bills", "Amount": 1200, "User": "Papa", "Note": "Electricity"}
+    ])
+if 'messages' not in st.session_state: st.session_state.messages = []
+if 'last_action' not in st.session_state: st.session_state.last_action = None
+
+# ==========================================
+# 4. LOGIN PAGE
+# ==========================================
 def login_page():
-    st.markdown("<h1 style='text-align:center; color:#0071ce;'>🏢 ABHI_NEW_MART-1.0</h1>", unsafe_allow_html=True)
-    st.markdown(f"<p style='text-align:center;'>System Time: {datetime.now().strftime('%d-%b-%Y | %I:%M %p')}</p>", unsafe_allow_html=True)
-    
-    c1, c2 = st.columns([1.5, 1])
-    with c1:
-        st.plotly_chart(get_3d_ai_visual(), use_container_width=True)
-        st.caption("Secure AI-Powered Retail Environment")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("<div style='text-align: center; margin-top: 50px;'>", unsafe_allow_html=True)
+        # --- BIG 3D LOGO ---
+        st.image("https://cdn-icons-png.flaticon.com/512/9376/9376757.png", width=140) # 3D Gem Icon
+        st.markdown("<h1>Luxora By ABHISHEK</h1>", unsafe_allow_html=True)
+        st.caption("Secure Personal Management Suite v9.0")
         
-    with c2:
-        with st.container(border=True):
-            with st.form("login_form"): 
-                st.subheader("System Login")
-                st.info("Try User: abhishek | Pass: 12345") # Hint for easy login
-                user = st.text_input("Username")
-                pwd = st.text_input("Password", type="password")
-                
-                submitted = st.form_submit_button("🔒 Authenticate")
-                
-                if submitted:
-                    if user in users_db and check_hashes(pwd, users_db[user]['password']):
-                        st.session_state.logged_in = True
-                        st.session_state.user_role = users_db[user]['role']
-                        st.session_state.user_name = users_db[user]['name']
-                        st.rerun()
-                    else:
-                        st.error("Invalid Access Credentials.")
+        tab1, tab2 = st.tabs(["🔒 Login", "📝 Sign Up"])
+        with tab1:
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            if st.button("Login", use_container_width=True):
+                users_db = st.session_state.users
+                if username in users_db and users_db[username]["password"] == password:
+                    st.session_state.logged_in_user = users_db[username]
+                    st.session_state.username_id = username
+                    st.success("Access Granted!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("Incorrect Credentials")
+        with tab2:
+            new_name = st.text_input("Full Name")
+            new_user = st.text_input("Create User ID")
+            new_pass = st.text_input("Create Password", type="password")
+            if st.button("Create Account", use_container_width=True):
+                if new_user in st.session_state.users: st.warning("User Exists!")
+                elif new_name and new_user and new_pass:
+                    st.session_state.users[new_user] = {"password": new_pass, "name": new_name, "role": "User"}
+                    st.success("Account Created! Login Now.")
+                else: st.error("Fill all fields.")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-# --- 5. MAIN APPLICATION ---
+# ==========================================
+# 5. MAIN APP
+# ==========================================
 def main_app():
+    user_info = st.session_state.logged_in_user
+    current_name = user_info['name']
+    
     with st.sidebar:
-        st.markdown(f"## 🕒 {datetime.now().strftime('%I:%M %p')}")
-        st.caption(f"📅 {datetime.now().strftime('%d-%B-%Y')}")
-        st.divider()
-        st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
-        st.write(f"User: **{st.session_state.user_name}**")
-        st.caption(f"Role: {st.session_state.user_role}")
-        
-        menu = ["POS Terminal", "CRM (Customers)", "Inventory", "Analytics & Search"]
-        if st.session_state.user_role == "Staff":
-            menu = ["POS Terminal", "CRM (Customers)", "Inventory"]
-            
-        choice = st.radio("Navigation", menu)
-        st.divider()
-        if st.button("🔴 Log Out"):
-            st.session_state.logged_in = False
+        st.markdown(f"""
+            <img src="https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg" class="avatar-3d">
+            <div style="text-align: center; margin-top: 15px;">
+                <h2 style="margin:0; color:#333;">{current_name}</h2>
+                <p style="color:gray; font-size:14px;">ID: @{st.session_state.username_id}</p>
+                <div style="background: #e0f2f1; padding: 5px; border-radius: 10px; display: inline-block;">
+                    <span class="online-indicator"></span> 
+                    <span style="color: #00695c; font-weight: bold; margin-left: 5px;">Online</span>
+                </div>
+            </div>
+            <hr>
+        """, unsafe_allow_html=True)
+        menu = st.radio("Menu", ["Dashboard", "Finance Pro", "AI Brain", "Logout"], label_visibility="collapsed")
+        if menu == "Logout":
+            st.session_state.logged_in_user = None
             st.rerun()
 
-    if choice == "POS Terminal":
-        c_head_1, c_head_2 = st.columns([3, 1])
-        c_head_1.title("🛒 POS Billing")
-        c_head_2.markdown(f"**Date:** {datetime.now().strftime('%d-%m-%Y')}")
+    # --- DASHBOARD ---
+    if menu == "Dashboard":
+        c_head1, c_head2 = st.columns([4, 1])
+        with c_head1:
+            st.title(f"👋 Welcome Back, {current_name}")
+            st.caption("Daily Smart Briefing")
+        with c_head2:
+            # 3D AI ROBOT (Online Status)
+            st.markdown("""<div style="text-align: center;"><img src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" width="90"><br><span class="online-indicator"></span> <b>System Live</b></div>""", unsafe_allow_html=True)
         
-        with st.container(border=True):
-            c1, c2, c3 = st.columns([2, 1, 1])
-            phone_input = c1.text_input("📞 Customer Phone (Optional)", placeholder="Enter 10-digit number")
-            if c2.button("Find Customer"):
-                if phone_input in st.session_state.customers:
-                    cust = st.session_state.customers[phone_input]
-                    st.session_state.current_customer = phone_input
-                    c3.success(f"Verified: {cust['Name']}")
-                    c3.caption(f"Points: {cust['Points']}")
-                else:
-                    st.session_state.current_customer = None
-                    c3.warning("New Customer")
-                    if c2.button("Register New"):
-                        st.session_state.customers[phone_input] = {"Name": "New User", "Points": 0, "Total Spent": 0}
-                        st.success("Registered!")
-
-        col_left, col_right = st.columns([1, 1.2])
-
-        with col_left:
-            st.subheader("Scan Items")
-            product_list = [p["Product"] for p in st.session_state.inventory]
-            selected_product = st.selectbox("Select Product", product_list)
-            details = get_product_details(selected_product)
-            st.info(f"Price: ₹{details['Price']} | Stock: {details['Stock']}")
-            qty = st.number_input("Qty", min_value=1, value=1)
-            if st.button("➕ Add to Cart", type="primary", use_container_width=True):
-                if qty <= details['Stock']:
-                    total = qty * details['Price']
-                    st.session_state.cart.append({"Item": selected_product, "Qty": qty, "Price": details['Price'], "Total": total})
-                    st.toast("Item Added!")
-                else: st.error("❌ Out of Stock!")
-
-        with col_right:
-            st.subheader("🧾 Receipt Preview")
-            st.caption(f"Invoice Time: {datetime.now().strftime('%I:%M %p')}")
-            if st.session_state.cart:
-                df_cart = pd.DataFrame(st.session_state.cart)
-                st.dataframe(df_cart, hide_index=True, use_container_width=True)
-                
-                subtotal = df_cart['Total'].sum()
-                coupon_code = st.text_input("🎟️ Apply Coupon")
-                discount = 0
-                if coupon_code and coupon_code in coupons:
-                    val = coupons[coupon_code]
-                    discount = subtotal * val if val < 1 else val
-                    st.caption(f"Coupon Applied: -₹{discount}")
-
-                use_points = st.checkbox("Redeem Points?")
-                points_discount = 0
-                if use_points and st.session_state.current_customer:
-                    avail = st.session_state.customers[st.session_state.current_customer]["Points"]
-                    points_discount = min(avail, subtotal - discount)
-                    st.caption(f"Points Redeemed: -₹{points_discount}")
-
-                total_discount = discount + points_discount
-                tax = (subtotal - total_discount) * 0.18
-                grand_total = (subtotal - total_discount) + tax
-
-                st.divider()
-                r1, r2 = st.columns(2)
-                r1.markdown(f"Subtotal: ₹{subtotal}")
-                r1.markdown(f"Discount: -₹{total_discount}")
-                r1.markdown(f"GST (18%): ₹{tax:.2f}")
-                r2.markdown(f"### Total: ₹{grand_total:.2f}")
-                
-                if r2.button("✅ CHECKOUT & PRINT", type="primary"):
-                    with st.spinner("Processing Transaction..."):
-                        time.sleep(1)
-                        if use_points and st.session_state.current_customer:
-                            st.session_state.customers[st.session_state.current_customer]["Points"] -= int(points_discount)
-                        
-                        new_bill_id = process_transaction(total_discount, subtotal, tax, grand_total)
-                        st.session_state.cart = []
-                        st.session_state.current_customer = None
-                        st.balloons()
-                        st.success(f"Transaction Successful! Bill No: {new_bill_id}")
-                        time.sleep(3)
-                        st.rerun()
-
-    elif choice == "CRM (Customers)":
-        st.title("👥 Customer Database")
-        st.write(f"As on: {datetime.now().strftime('%d-%b-%Y %I:%M %p')}")
-        crm_data = []
-        for phone, data in st.session_state.customers.items():
-            row = data.copy()
-            row['Phone'] = phone
-            crm_data.append(row)
-        st.dataframe(pd.DataFrame(crm_data), use_container_width=True)
-
-    elif choice == "Inventory":
-        st.title("📦 Warehouse Stock")
-        st.caption(f"Last Updated: {datetime.now().strftime('%I:%M %p')}")
-        df_inv = pd.DataFrame(st.session_state.inventory)
-        c1, c2 = st.columns(2)
-        c1.metric("Total SKU Count", len(df_inv))
-        c2.metric("⚠️ Low Stock Alerts", len(df_inv[df_inv['Stock'] < 5]), delta_color="inverse")
-        st.dataframe(df_inv.style.map(lambda x: 'background-color: #ffcccc' if x < 5 else '', subset=['Stock']), use_container_width=True)
-
-    elif choice == "Analytics & Search":
-        st.title("📈 Analytics & Records")
-        st.caption(f"Report Time: {datetime.now().strftime('%d-%b-%Y %I:%M %p')}")
+        df = st.session_state.expenses
+        total = df["Amount"].sum()
+        k1, k2, k3 = st.columns(3)
+        k1.metric("Wallet Balance", f"₹{total}", "Live Update")
+        k2.metric("Total Items", len(df))
+        k3.metric("AI Status", "Active", "v9.0")
         
-        tab1, tab2 = st.tabs(["📊 Sales Report", "🔍 Search Old Bill"])
+        if not df.empty:
+            st.subheader("📊 Live Activity")
+            fig = px.bar(df, x="Category", y="Amount", color="User")
+            st.plotly_chart(fig, use_container_width=True)
+
+    # --- FINANCE PRO ---
+    elif menu == "Finance Pro":
+        # HEADER WITH 3D LOGO
+        c_logo, c_title = st.columns([1, 6])
+        with c_logo: 
+            st.image("https://cdn-icons-png.flaticon.com/512/1077/1077366.png", width=90) # 3D Wallet
+        with c_title: 
+            st.title("Finance Command Center")
+        
+        if st.session_state.last_action:
+            act = st.session_state.last_action
+            css = "deleted" if act['type'] == "delete" else "updated"
+            st.markdown(f"<div class='highlight-box {css}'>{act['msg']}</div>", unsafe_allow_html=True)
+
+        tab1, tab2, tab3, tab4 = st.tabs(["➕ Add Item", "🔍 Modify (Highlight)", "📑 Report", "🧾 Bill Generator"])
         
         with tab1:
-            if not st.session_state.sales_history:
-                st.info("No sales data available.")
-            else:
-                df_sales = pd.DataFrame(st.session_state.sales_history)
-                k1, k2, k3 = st.columns(3)
-                k1.metric("Total Revenue", f"₹{df_sales['Grand Total'].sum():,.2f}")
-                k2.metric("Total Discounts", f"₹{df_sales['Discount'].sum():,.2f}")
-                k3.metric("Total Bills", len(df_sales))
-                st.subheader("Transaction Log")
-                st.dataframe(df_sales[['Bill ID', 'Date Time', 'Customer', 'Grand Total']], use_container_width=True)
-                
+            with st.form("new_entry"):
                 c1, c2 = st.columns(2)
-                c1.plotly_chart(get_3d_ai_visual(), use_container_width=True)
-                c2.caption("AI Sales Trend Analysis (Visual Placeholder)")
+                dt = c1.date_input("Date")
+                ct = c2.selectbox("Category", ["Food", "Travel", "Bills", "Shopping", "Other"])
+                amt = c1.number_input("Amount", min_value=0)
+                nt = c2.text_input("Note")
+                if st.form_submit_button("Add Record"):
+                    nid = f"TXN-{random.randint(1000,9999)}"
+                    row = pd.DataFrame([{"ID": nid, "Date": str(dt), "Category": ct, "Amount": amt, "User": current_name, "Note": nt}])
+                    st.session_state.expenses = pd.concat([st.session_state.expenses, row], ignore_index=True)
+                    st.session_state.last_action = {"type": "update", "msg": f"✅ Added: {ct} (₹{amt})"}
+                    st.rerun()
 
         with tab2:
-            st.subheader("Find Past Invoice")
-            search_bill_no = st.text_input("Enter Bill No. (e.g., INV-169...)")
-            if st.button("🔍 Search Bill"):
-                found_bill = None
-                for bill in st.session_state.sales_history:
-                    if bill['Bill ID'] == search_bill_no:
-                        found_bill = bill
-                        break
-                
-                if found_bill:
-                    st.success(f"Bill Found: {found_bill['Bill ID']}")
-                    with st.container(border=True):
-                        st.markdown(f"### 🧾 INVOICE REPRINT")
-                        st.write(f"**Date:** {found_bill['Date Time']}")
-                        st.write(f"**Customer:** {found_bill['Customer']} ({found_bill['Phone']})")
-                        st.write(f"**Cashier:** {found_bill['Cashier']}")
-                        st.divider()
-                        st.write("**Items Purchased:**")
-                        st.dataframe(pd.DataFrame(found_bill['Items Detail']), hide_index=True)
-                        st.divider()
-                        b1, b2 = st.columns(2)
-                        b1.write(f"Subtotal: ₹{found_bill['Subtotal']}")
-                        b1.write(f"Discount: -₹{found_bill['Discount']}")
-                        b1.write(f"Tax: ₹{found_bill['Tax']:.2f}")
-                        b2.markdown(f"### Grand Total: ₹{found_bill['Grand Total']:.2f}")
-                else:
-                    st.error("Bill not found in records.")
+            st.subheader("Update or Delete")
+            search_id = st.text_input("Enter Transaction ID")
+            if search_id:
+                df = st.session_state.expenses
+                record = df[df["ID"] == search_id]
+                if not record.empty:
+                    st.dataframe(record, hide_index=True)
+                    c_up, c_del = st.columns(2)
+                    with c_up:
+                        with st.expander("✏️ Update"):
+                            new_amt = st.number_input("New Amount", value=int(record.iloc[0]["Amount"]))
+                            if st.button("Update"):
+                                idx = record.index[0]
+                                st.session_state.expenses.at[idx, "Amount"] = new_amt
+                                st.session_state.last_action = {"type": "update", "msg": f"✏️ Updated ID {search_id} to ₹{new_amt}"}
+                                st.rerun()
+                    with c_del:
+                        with st.expander("🗑️ Delete"):
+                            if st.button("Confirm Delete"):
+                                st.session_state.expenses = df[df["ID"] != search_id]
+                                st.session_state.last_action = {"type": "delete", "msg": f"🗑️ DELETED ID {search_id}"}
+                                st.rerun()
+                else: st.warning("ID Not Found")
 
-# Run Logic
-if st.session_state.logged_in:
-    main_app()
-else:
-    login_page()
+        with tab3:
+            st.dataframe(st.session_state.expenses, use_container_width=True)
+
+        with tab4:
+            c_bill_logo, c_bill_title = st.columns([1, 6])
+            with c_bill_logo: st.image("https://cdn-icons-png.flaticon.com/512/2920/2920323.png", width=60) # 3D Document
+            with c_bill_title: st.subheader("Automatic Monthly Bill")
+            
+            df = st.session_state.expenses
+            if not df.empty:
+                df['Date_Obj'] = pd.to_datetime(df['Date'])
+                df['Month_Year'] = df['Date_Obj'].dt.strftime('%B %Y')
+                months = df['Month_Year'].unique()
+                sel_month = st.selectbox("Select Month to Generate Bill", months)
+                
+                bill_data = df[df['Month_Year'] == sel_month]
+                total_bill = bill_data['Amount'].sum()
+                
+                st.markdown(f"""
+                <div class="bill-container">
+                    <div class="bill-header">
+                        <h2 style="color: #333; margin:0;">LUXORA MONTHLY STATEMENT</h2>
+                        <p style="color: #777;">Client: {current_name} | Period: {sel_month}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                st.table(bill_data[['Date', 'Category', 'Note', 'Amount']])
+                
+                st.markdown(f"""
+                    <div class="bill-total">
+                        <h1 style="color: #007bff; margin:0;">TOTAL PAYABLE: ₹{total_bill}</h1>
+                        <p style="font-size: 12px; color: gray;">Generated by Luxora AI System</p>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                csv = bill_data.to_csv(index=False).encode('utf-8')
+                st.download_button("📥 Download Bill (CSV)", csv, f"Bill_{sel_month}.csv", "text/csv")
+            else:
+                st.info("No data available.")
+
+    # --- AI BRAIN ---
+    elif menu == "AI Brain":
+        # HEADER WITH 3D LOGO
+        c_ai_logo, c_ai_title = st.columns([1, 6])
+        with c_ai_logo: st.image("https://cdn-icons-png.flaticon.com/512/4712/4712027.png", width=80) # 3D Robot Head
+        with c_ai_title: st.title("Gemini AI Brain")
+        
+        st.markdown("""<div style="background-color: #f0f9ff; padding: 15px; border-radius: 10px; border-left: 5px solid #00d2ff;"><strong>💡 Need Key?</strong> <a href="https://aistudio.google.com/app/apikey" target="_blank">👉 Click Here</a></div>""", unsafe_allow_html=True)
+        key = st.text_input("Paste API Key", type="password")
+        if key:
+            prompt = st.chat_input("Ask...")
+            if prompt:
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                for m in st.session_state.messages:
+                    with st.chat_message(m["role"]):
+                        st.write(m["content"])
+                try:
+                    import google.generativeai as genai
+                    genai.configure(api_key=key)
+                    model = genai.GenerativeModel('gemini-pro')
+                    res = model.generate_content(prompt)
+                    st.session_state.messages.append({"role": "assistant", "content": res.text})
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+if __name__ == "__main__":
+    if st.session_state.logged_in_user is None: login_page()
+    else: main_app()
