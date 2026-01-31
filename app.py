@@ -6,148 +6,164 @@ import random
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import google.generativeai as genai
+import streamlit.components.v1 as components
+from datetime import datetime
 
 # ==========================================
-# 1. GOOGLE SHEETS CONNECTION
+# 1. LUXURY PRO SETUP & ANIMATION THEME
 # ==========================================
-def connect_db():
-    try:
-        # Define Scope
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        
-        # Load Credentials from Streamlit Secrets
-        # Setup: Streamlit Cloud Dashboard > App > Settings > Secrets
-        creds_dict = dict(st.secrets["gcp_service_account"])
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        client = gspread.authorize(creds)
-        
-        # Open the Sheet
-        sheet = client.open("Luxora_DB") # Sheet ka naam EXACT same hona chahiye
-        return sheet
-    except Exception as e:
-        st.error("⚠️ Database Connection Failed! Please check Streamlit Secrets.")
-        st.stop()
+st.set_page_config(page_title="💎 ABHISHEK LUXORA PRO 10.0 INDORE EDITION", page_icon="💎", layout="wide", initial_sidebar_state="expanded")
 
-# --- HELPER FUNCTIONS ---
-
-def get_data(sheet_name):
-    """Sheet se data padhkar DataFrame banata hai"""
-    try:
-        sh = connect_db()
-        worksheet = sh.worksheet(sheet_name)
-        data = worksheet.get_all_records()
-        df = pd.DataFrame(data)
-        # Empty rows handle karna
-        return df if not df.empty else pd.DataFrame()
-    except:
-        return pd.DataFrame()
-
-def add_row(sheet_name, row_data):
-    """Nayi line add karta hai"""
-    sh = connect_db()
-    worksheet = sh.worksheet(sheet_name)
-    worksheet.append_row(row_data)
-
-def delete_row_by_id(sheet_name, col_name, id_val):
-    """ID dhundh kar row delete karta hai (Cloud operation)"""
-    sh = connect_db()
-    worksheet = sh.worksheet(sheet_name)
-    try:
-        cell = worksheet.find(str(id_val))
-        worksheet.delete_rows(cell.row)
-        return True
-    except:
-        return False
-
-def update_row_by_id(sheet_name, id_val, new_amount, new_note):
-    """ID dhundh kar update karta hai"""
-    sh = connect_db()
-    worksheet = sh.worksheet(sheet_name)
-    try:
-        cell = worksheet.find(str(id_val))
-        # Amount aur Note update (Assuming columns layout: id, date, category, amount, user, note)
-        # Amount is Col 4, Note is Col 6 (A=1, B=2...)
-        worksheet.update_cell(cell.row, 4, new_amount) 
-        worksheet.update_cell(cell.row, 6, new_note)
-        return True
-    except:
-        return False
-
-# ==========================================
-# 2. APP CONFIGURATION
-# ==========================================
-st.set_page_config(
-    page_title="ABHI Luxora Cloud",
-    page_icon="☁️",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# WHITE & GOLD THEME
+# --- 🌟 LIVE INDORE PRO THEME (CSS) ---
 st.markdown("""
 <style>
-    .stApp { background-color: #ffffff; background-image: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); color: #333333; }
-    .glass-card { background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 16px; padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-    h1, h2, h3 { background: linear-gradient(45deg, #b8860b, #d4af37, #daa520); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800 !important; }
-    .stTextInput>div>div>input, .stNumberInput>div>div>input { border: 1px solid #d4af37 !important; border-radius: 8px; }
-    .stButton>button { background: linear-gradient(90deg, #d4af37, #f1c40f); color: white; border: none; padding: 10px 20px; font-weight: bold; border-radius: 8px; }
-    .bill-box { border: 2px dashed #d4af37; padding: 20px; background: #fff; text-align: center; border-radius: 10px; margin-top: 10px; }
+    /* LIVE MOVING BACKGROUND ANIMATION */
+    @keyframes gradient {
+        0% {background-position: 0% 50%;}
+        50% {background-position: 100% 50%;}
+        100% {background-position: 0% 50%;}
+    }
+    .stApp {
+        background: linear-gradient(-45deg, #f3f4f6, #e0e7ff, #ffe4e6, #f0fdf4);
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
+    }
+    
+    /* GLASSMORPHISM CARDS */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 25px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        margin-bottom: 20px;
+        transition: transform 0.3s ease;
+    }
+    .glass-card:hover { transform: translateY(-5px); }
+
+    /* TEXT STYLING */
+    h1, h2, h3 { color: #1f2937; font-family: 'Helvetica Neue', sans-serif; font-weight: 800; }
+    
+    /* SIDEBAR CARD */
+    .xp-card {
+        background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+        margin-bottom: 20px;
+    }
+    
+    /* BUTTONS */
+    .stButton>button {
+        background: linear-gradient(90deg, #111827, #374151);
+        color: white;
+        border-radius: 10px;
+        padding: 10px 25px;
+        font-weight: bold;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+    /* ALERTS */
+    .best-deal { background: #dcfce7; border-left: 5px solid #22c55e; padding: 15px; border-radius: 10px; color: #14532d; }
+    .high-risk { background: #fee2e2; border-left: 5px solid #ef4444; padding: 15px; border-radius: 10px; color: #7f1d1d; }
+    
+    /* TXN ID Badge */
+    .txn-badge { background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 5px; font-size: 0.9em; font-family: monospace; border: 1px solid #7dd3fc; }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. SESSION STATE
+# 2. DATABASE FUNCTIONS
 # ==========================================
-if 'user' not in st.session_state:
-    st.session_state.user = None
+@st.cache_resource
+def connect_db():
+    try:
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        if "gcp_service_account" not in st.secrets:
+            st.error("⚠️ Secrets not found! Check Streamlit Settings.")
+            st.stop()
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        client = gspread.authorize(creds)
+        return client.open("Luxora_DB")
+    except Exception as e:
+        st.error(f"⚠️ DB Error: {e}"); st.stop()
+
+def get_data(sheet_name):
+    try: return pd.DataFrame(connect_db().worksheet(sheet_name).get_all_records())
+    except: return pd.DataFrame()
+
+def add_row(sheet_name, row_data):
+    try: connect_db().worksheet(sheet_name).append_row(row_data); return True
+    except: return False
+
+def delete_row_by_id(sheet_name, col_name, id_val):
+    try:
+        ws = connect_db().worksheet(sheet_name)
+        cell = ws.find(str(id_val))
+        ws.delete_rows(cell.row)
+        return True
+    except: return False
+
+# Generic Update Function (Flexible)
+def update_cell_value(sheet_name, id_val, col_index, new_value):
+    try:
+        ws = connect_db().worksheet(sheet_name)
+        cell = ws.find(str(id_val))
+        ws.update_cell(cell.row, col_index, new_value)
+        return True
+    except: return False
+
+# ==========================================
+# 3. AI ENGINE
+# ==========================================
+class ProLearningAI:
+    def __init__(self, api_key):
+        if api_key:
+            genai.configure(api_key=api_key)
+            self.model = genai.GenerativeModel('gemini-pro')
+            self.active = True
+        else: self.active = False
+
+    def get_lesson(self, topic):
+        if not self.active: return "⚠️ API Key Missing!"
+        prompt = f"Explain '{topic}' simply. Format: Definition, How it works, Fun Fact. Keep it short."
+        try: return self.model.generate_content(prompt).text
+        except: return "⚠️ AI Error."
 
 # ==========================================
 # 4. LOGIN SYSTEM
 # ==========================================
+if 'user' not in st.session_state: st.session_state.user = None
+if 'xp' not in st.session_state: st.session_state.xp = 0
+if 'level' not in st.session_state: st.session_state.level = "🌱 Beginner"
+
 def login_page():
     c1, c2, c3 = st.columns([1, 1.5, 1])
     with c2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown("""<div class="glass-card" style="text-align:center;"><h1 style="font-size: 35px;">ABHI LUXORA CLOUD</h1><p style="color: #666;">GOOGLE SHEETS EDITION</p></div>""", unsafe_allow_html=True)
-
-        tab1, tab2 = st.tabs(["LOGIN", "REGISTER"])
-        
+        st.markdown("<br><div class='glass-card' style='text-align:center;'><h1>💎 ABHISHEK LUXORA PRO 10.0</h1><p>INDORE EDITION</p></div>", unsafe_allow_html=True)
+        tab1, tab2 = st.tabs(["🔐 LOGIN", "📝 REGISTER"])
         with tab1:
-            username = st.text_input("Username", key="l_user")
-            password = st.text_input("Password", type="password", key="l_pass")
+            u = st.text_input("Username"); p = st.text_input("Password", type="password")
             if st.button("ENTER CLASSROOM", use_container_width=True):
-                with st.spinner("Connecting to Google Cloud..."):
-                    df = get_data("Users")
-                    if not df.empty:
-                        # Convert to string for safe comparison
-                        df['username'] = df['username'].astype(str)
-                        df['password'] = df['password'].astype(str)
-                        
-                        user = df[(df['username'] == username) & (df['password'] == password)]
-                        
-                        if not user.empty:
-                            u_data = user.iloc[0]
-                            st.session_state.user = {"username": u_data['username'], "name": u_data['name'], "role": u_data['role']}
-                            st.success(f"Welcome, {u_data['name']}")
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error("Invalid ID or Password.")
-                    else:
-                        st.error("Database Empty or Connection Failed.")
-
+                df = get_data("Users")
+                if not df.empty:
+                    df['username'] = df['username'].astype(str); df['password'] = df['password'].astype(str)
+                    user = df[(df['username'] == u) & (df['password'] == p)]
+                    if not user.empty:
+                        st.session_state.user = user.iloc[0].to_dict()
+                        st.success("Welcome!"); st.rerun()
+                    else: st.error("Wrong Password")
         with tab2:
-            new_name = st.text_input("Student Name")
-            new_user = st.text_input("Create User ID")
-            new_pass = st.text_input("Create Password", type="password")
-            if st.button("JOIN LUXORA", use_container_width=True):
-                with st.spinner("Saving to Cloud..."):
-                    df = get_data("Users")
-                    if not df.empty and str(new_user) in df['username'].astype(str).values:
-                        st.error("Username Taken!")
-                    else:
-                        add_row("Users", [new_user, new_pass, new_name, "User"])
-                        st.success("Account Created! Login Now.")
+            nm = st.text_input("Name"); nu = st.text_input("New User ID"); np = st.text_input("New Password", type="password")
+            if st.button("CREATE ACCOUNT", use_container_width=True):
+                add_row("Users", [nu, np, nm, "User"]); st.success("Created! Login Now.")
 
 # ==========================================
 # 5. MAIN APP
@@ -156,181 +172,309 @@ def main_app():
     user = st.session_state.user
     
     with st.sidebar:
-        badge = "👑 BOSS" if user['role'] == "Admin" else "🎓 STUDENT"
         st.markdown(f"""
-        <div style="text-align: center; padding: 20px;">
-            <h3 style="margin-top: 10px; color: #333;">{user['name']}</h3>
-            <p style="color: #666;">ID: {user['username']}</p>
-            <div style="background: #333; color: white; padding: 5px 15px; border-radius: 20px; display: inline-block;">{badge}</div>
+        <div class="xp-card">
+            <h3>{st.session_state.level}</h3>
+            <h1>⭐ {st.session_state.xp} XP</h1>
         </div>
         """, unsafe_allow_html=True)
+        st.write(f"👤 **{user['name']}**")
         
-        options = ["DASHBOARD", "WALLET", "AI HELP"]
-        if user['role'] == "Admin": options.append("🏢 STAFF JOBS")
-        options.append("LOGOUT")
+        # Auto-Key
+        if "GEMINI_API_KEY" in st.secrets: api_key = st.secrets["GEMINI_API_KEY"]; st.success("✅ AI Key Linked")
+        else: api_key = st.text_input("🔑 Enter Gemini Key", type="password")
         
-        menu = st.radio("MENU", options, label_visibility="collapsed")
-        if menu == "LOGOUT":
-            st.session_state.user = None
-            st.rerun()
+        # MENU
+        options = ["DASHBOARD", "🧠 3D AI LAB", "💰 WALLET PRO 10.0", "✅ TASKS", "📓 NOTEBOOK", "📊 ATTENDANCE", "🤖 AI TUTOR"]
+        if user['role'] == "Admin": 
+            options.append("💸 LOAN MANAGER (BOSS)")
+            options.append("🏢 STAFF JOBS PRO")
+        options.append("🚪 LOGOUT")
+        
+        menu = st.radio("MENU", options)
+        if menu == "🚪 LOGOUT": st.session_state.user = None; st.rerun()
 
     # --- DASHBOARD ---
     if menu == "DASHBOARD":
-        st.title("DASHBOARD (LIVE CLOUD DATA)")
+        st.markdown("<div class='glass-card'><h1>🚀 LIVE DASHBOARD</h1></div>", unsafe_allow_html=True)
+        df_exp = get_data("Expenses")
+        my_exp = df_exp[df_exp['user'] == user['username']] if not df_exp.empty else pd.DataFrame()
+        spent = my_exp['amount'].sum() if not my_exp.empty else 0
         
-        # Load Data
-        df = get_data("Expenses")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("TOTAL SPEND", f"₹{spent}")
+        c2.metric("LEVEL", st.session_state.level)
+        c3.metric("XP", st.session_state.xp)
         
-        # Filter Logic
-        if user['role'] != "Admin" and not df.empty:
-            df = df[df['user'] == user['name']]
-            
-        total_spent = df['amount'].sum() if not df.empty else 0
-        
-        if user['role'] == "Admin":
-            users_df = get_data("Users")
-            # Count only Users (not Admin)
-            if not users_df.empty:
-                total_students = len(users_df[users_df['role'] == 'User'])
-            else:
-                total_students = 0
-                
-            c1, c2, c3 = st.columns(3)
-            c1.metric("TOTAL STUDENTS", total_students)
-            c2.metric("TOTAL SPEND", f"₹{total_spent:,.0f}")
-            c3.metric("BOSS MODE", "ON")
-            
-            st.markdown("### 📋 REGISTERED STUDENTS")
-            if not users_df.empty:
-                st.dataframe(users_df[users_df['role'] == 'User'], use_container_width=True)
-                
-        else:
-            c1, c2 = st.columns(2)
-            c1.metric("TOTAL SPENT", f"₹{total_spent:,.0f}")
-            c2.metric("TRANSACTIONS", len(df))
-            
-            if not df.empty:
-                fig = px.bar(df, x='category', y='amount', color='category')
-                st.plotly_chart(fig, use_container_width=True)
+        if not my_exp.empty:
+            st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
+            st.plotly_chart(px.bar(my_exp, x='category', y='amount', color='category', title="Live Spending Tracker"), use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- WALLET ---
-    elif menu == "WALLET":
-        st.title("STUDENT WALLET 💳")
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["➕ DAILY ENTRY", "🔍 MANAGE", "📊 SMART REPORT", "🧾 BILL", "📈 ANALYSIS"])
+    # --- 💸 LOAN MANAGER (BOSS) ---
+    elif menu == "💸 LOAN MANAGER (BOSS)":
+        if user['role'] == "Admin":
+            st.markdown("<div class='glass-card'><h1>💸 BOSS LOAN COMMAND CENTER</h1></div>", unsafe_allow_html=True)
+            tab1, tab2, tab3 = st.tabs(["➕ ADD LOAN", "📉 INTELLIGENT REPORT", "🔍 MANAGE LOANS"])
+            
+            with tab1:
+                with st.form("loan_form"):
+                    c1, c2 = st.columns(2)
+                    l_date = c1.date_input("Loan Date")
+                    l_app = c2.text_input("App Name (e.g. Cred)")
+                    l_amt = c1.number_input("Amount (₹)", min_value=0)
+                    l_rate = c2.number_input("Interest Rate (%)", min_value=0.0, step=0.1)
+                    l_note = st.text_input("Note / Deadline")
+                    if st.form_submit_button("SAVE RECORD"):
+                        lid = f"LN-{random.randint(1000,9999)}"
+                        add_row("Loans", [lid, str(l_date), l_app, l_amt, l_rate, l_note])
+                        st.success(f"Loan Added! ID: {lid}")
+
+            with tab2:
+                df_loan = get_data("Loans")
+                if not df_loan.empty:
+                    df_loan['amount'] = pd.to_numeric(df_loan['amount'], errors='coerce')
+                    df_loan['interest_rate'] = pd.to_numeric(df_loan['interest_rate'], errors='coerce')
+                    df_loan['Total_Interest'] = df_loan['amount'] * (df_loan['interest_rate'] / 100)
+                    df_loan['Total_Payable'] = df_loan['amount'] + df_loan['Total_Interest']
+                    
+                    min_idx = df_loan['interest_rate'].idxmin(); best_app = df_loan.loc[min_idx]
+                    st.markdown(f"<div class='best-deal'>🏆 <b>BEST DEAL:</b> {best_app['app_name']} ({best_app['interest_rate']}%)</div>", unsafe_allow_html=True)
+                    
+                    c1, c2 = st.columns(2)
+                    c1.metric("Total Debt", f"₹{df_loan['amount'].sum():,.0f}")
+                    c2.metric("Total Interest", f"₹{df_loan['Total_Interest'].sum():,.0f}")
+                    st.plotly_chart(px.bar(df_loan, x='app_name', y=['amount', 'Total_Interest'], barmode='group'), use_container_width=True)
+                    
+                    csv = df_loan.to_csv(index=False).encode('utf-8')
+                    st.download_button("📥 DOWNLOAD SMART REPORT", csv, "loan_report.csv", "text/csv")
+                else: st.info("No loans found.")
+
+            with tab3:
+                lid = st.text_input("Enter Loan ID (LN-....)")
+                if lid:
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        u_amt = st.number_input("New Amount", min_value=0)
+                        if st.button("UPDATE AMOUNT"):
+                            if update_cell_value("Loans", lid, 4, u_amt): st.success("Updated!"); st.rerun()
+                    with c2:
+                        if st.button("DELETE LOAN"):
+                            if delete_row_by_id("Loans", "id", lid): st.warning("Deleted!"); st.rerun()
+                st.dataframe(get_data("Loans"), use_container_width=True)
+        else: st.error("Access Denied")
+
+    # --- 🏢 STAFF JOBS PRO ---
+    elif menu == "🏢 STAFF JOBS PRO":
+        if user['role'] == "Admin":
+            st.markdown("<div class='glass-card'><h1>🏢 STAFF MANAGEMENT PRO</h1></div>", unsafe_allow_html=True)
+            tab1, tab2, tab3 = st.tabs(["➕ ADD JOB", "🔍 UPDATE/DELETE", "📊 SMART REPORTS"])
+            
+            # TAB 1: ADD
+            with tab1:
+                with st.form("job_form"):
+                    c1, c2 = st.columns(2)
+                    jd = c1.date_input("Date")
+                    js = c2.text_input("Staff Name")
+                    jr = c1.text_input("Role / Work Type")
+                    jsal = c2.number_input("Salary (₹)", min_value=0)
+                    if st.form_submit_button("SAVE JOB"):
+                        jid = f"JOB-{random.randint(1000,9999)}"
+                        # Saving: ID, Date, Name, Role, Salary
+                        add_row("Jobs", [jid, str(jd), js, jr, jsal])
+                        st.success(f"Job Added! ID: {jid}")
+
+            # TAB 2: MANAGE
+            with tab2:
+                st.subheader("Manage Staff Records")
+                search_jid = st.text_input("Enter Job ID (JOB-....)")
+                if search_jid:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        new_sal = st.number_input("Update Salary", min_value=0)
+                        if st.button("UPDATE SALARY"):
+                            if update_cell_value("Jobs", search_jid, 5, new_sal): st.success("Salary Updated!"); st.rerun()
+                            else: st.error("ID Not Found")
+                    with col2:
+                        st.write(""); st.write("")
+                        if st.button("DELETE JOB RECORD"):
+                            if delete_row_by_id("Jobs", "id", search_jid): st.warning("Deleted Successfully!"); st.rerun()
+                            else: st.error("ID Not Found")
+                
+                st.dataframe(get_data("Jobs"), use_container_width=True)
+
+            # TAB 3: REPORTS
+            with tab3:
+                st.subheader("📊 Staff Payroll Report")
+                df_jobs = get_data("Jobs")
+                if not df_jobs.empty:
+                    df_jobs['salary'] = pd.to_numeric(df_jobs['salary'], errors='coerce')
+                    total_payroll = df_jobs['salary'].sum()
+                    
+                    st.markdown(f"<div class='bill-box'><h3>Total Payroll</h3><h1>₹{total_payroll:,.0f}</h1></div>", unsafe_allow_html=True)
+                    st.write("")
+                    st.plotly_chart(px.pie(df_jobs, values='salary', names='name', title="Salary Distribution"), use_container_width=True)
+                    
+                    csv_jobs = df_jobs.to_csv(index=False).encode('utf-8')
+                    st.download_button("📥 DOWNLOAD EXCEL REPORT", csv_jobs, "staff_report.csv", "text/csv")
+                else: st.info("No records found.")
+        else: st.error("Access Denied")
+
+    # --- 🧠 3D AI LAB (LIVE) ---
+    elif menu == "🧠 3D AI LAB":
+        st.markdown("<div class='glass-card'><h1>🧠 3D LEARNING ENGINE</h1></div>", unsafe_allow_html=True)
+        topic = st.text_input("🔍 Search Anything (Heart, Engine, Pyramids)", placeholder="Type here...")
+        if st.button("🚀 LAUNCH LIVE 3D"):
+            if not topic or not api_key: st.error("Topic or Key missing!")
+            else:
+                with st.spinner("⚡ Connecting to 3D Server..."):
+                    ai = ProLearningAI(api_key); expl = ai.get_lesson(topic)
+                    st.session_state.xp += 50
+                    c1, c2 = st.columns([1, 1.5])
+                    with c1: st.markdown(f"<div class='glass-card'><h3>📘 {topic.upper()}</h3>{expl}</div>", unsafe_allow_html=True); st.success("+50 XP!")
+                    with c2:
+                        st.markdown("<div class='glass-card'><h3>🎥 LIVE 3D VIEW</h3>", unsafe_allow_html=True)
+                        components.iframe(src=f"https://sketchfab.com/search?q={topic}&type=models", height=500, scrolling=True)
+                        st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- 💰 WALLET PRO 10.0 (LUXURY EDITION) ---
+    elif menu == "💰 WALLET PRO 10.0":
+        st.markdown("<div class='glass-card'><h1>💰 WALLET PRO 10.0</h1><p>SMART LUXURY EDITION</p></div>", unsafe_allow_html=True)
+        tab1, tab2, tab3, tab4 = st.tabs(["➕ SMART ADD", "🔍 MANAGE & DELETE", "📊 PRO ANALYSIS", "🧾 AUTO BILL"])
         
+        # TAB 1: SMART ADD
         with tab1:
-            st.subheader("Add Expense to Sheet")
             with st.form("add_exp"):
                 c1, c2 = st.columns(2)
-                dt = c1.date_input("Date")
-                cat = c2.selectbox("Category", ["Canteen/Food", "Books", "Recharge", "Travel", "Fees", "Other"])
-                amt = c1.number_input("Amount (₹)", min_value=0)
-                nt = c2.text_input("Item Name / Note")
+                d = c1.date_input("Date")
+                # Dropdown for Category
+                cat = c2.selectbox("Select Category", ["Food", "Travel", "Fees", "Books", "Recharge", "Shopping", "Other"])
+                a = c1.number_input("Amount (₹)", min_value=0)
+                n = c2.text_input("Item Name / Note")
                 
-                if st.form_submit_button("SAVE TO CLOUD"):
+                if st.form_submit_button("💾 SAVE TRANSACTION"):
                     eid = f"TXN-{random.randint(1000,9999)}"
-                    with st.spinner("Syncing..."):
-                        add_row("Expenses", [eid, str(dt), cat, amt, user['name'], nt])
-                        st.success(f"Saved! ID: {eid}")
-                        time.sleep(1); st.rerun()
+                    add_row("Expenses", [eid, str(d), cat, a, user['username'], n])
+                    st.success(f"Saved Successfully! Transaction ID: {eid}")
+                    time.sleep(1); st.rerun()
 
+        # TAB 2: MANAGE & DELETE
         with tab2:
-            st.subheader("Update/Delete (Cloud)")
-            search = st.text_input("Transaction ID (e.g. TXN-1234)")
-            if search:
-                # Direct deletion requires logic, simplified here
+            st.subheader("Manage Transactions")
+            # Show Table First to see IDs
+            df = get_data("Expenses")
+            if not df.empty:
+                if user['role'] != 'Admin': df = df[df['user'] == user['username']]
+                
+                # Show Data with ID Badge
+                st.write("📋 **Your Transactions:** (Copy ID to Delete/Update)")
+                st.dataframe(df, use_container_width=True)
+                
+                st.write("---")
+                col1, col2 = st.columns(2)
+                
+                # Delete Section
+                with col1:
+                    st.markdown("<div class='high-risk'>🗑️ DELETE ZONE</div>", unsafe_allow_html=True)
+                    del_id = st.text_input("Enter TXN ID to Delete (e.g. TXN-1234)")
+                    if st.button("DELETE TRANSACTION"):
+                        if delete_row_by_id("Expenses", "id", del_id):
+                            st.warning("Deleted Successfully!"); st.rerun()
+                        else: st.error("ID Not Found")
+                
+                # Update Section
+                with col2:
+                    st.markdown("<div class='best-deal'>🔄 UPDATE ZONE</div>", unsafe_allow_html=True)
+                    up_id = st.text_input("Enter TXN ID to Update")
+                    new_amt = st.number_input("New Amount", min_value=0, key="w_new_amt")
+                    if st.button("UPDATE AMOUNT"):
+                        # Amount is col 4 in Expenses [id, date, cat, amount, user, note]
+                        if update_cell_value("Expenses", up_id, 4, new_amt):
+                            st.success("Updated Successfully!"); st.rerun()
+                        else: st.error("ID Not Found")
+            else: st.info("No transactions found.")
+
+        # TAB 3: PRO ANALYSIS & REPORT
+        with tab3:
+            st.subheader("📊 Spending Intelligence")
+            df = get_data("Expenses")
+            if not df.empty:
+                if user['role'] != 'Admin': df = df[df['user'] == user['username']]
+                
                 c1, c2 = st.columns(2)
                 with c1:
-                    u_amt = st.number_input("New Amount")
-                    u_note = st.text_input("New Note")
-                    if st.button("UPDATE CLOUD"):
-                        if update_row_by_id("Expenses", search, u_amt, u_note):
-                            st.success("Updated!")
-                        else:
-                            st.error("ID Not Found")
+                    st.plotly_chart(px.pie(df, values='amount', names='category', title="Category Breakdown", hole=0.4), use_container_width=True)
                 with c2:
-                    st.write("")
-                    st.write("")
-                    if st.button("DELETE FROM SHEET"):
-                        if delete_row_by_id("Expenses", "id", search):
-                            st.warning("Deleted!")
-                        else:
-                            st.error("ID Not Found")
-
-        with tab3:
-            st.subheader("Live Google Sheet View")
-            df = get_data("Expenses")
-            if user['role'] != "Admin" and not df.empty:
-                df = df[df['user'] == user['name']]
-            st.dataframe(df, use_container_width=True)
-
-        with tab4:
-            st.subheader("Monthly Bill")
-            df = get_data("Expenses")
-            if user['role'] != "Admin" and not df.empty: df = df[df['user'] == user['name']]
-            
-            if not df.empty:
-                df['date'] = pd.to_datetime(df['date'])
-                df['Month'] = df['date'].dt.strftime('%B %Y')
-                sel_month = st.selectbox("Select Month", df['Month'].unique())
-                bill_df = df[df['Month'] == sel_month]
-                st.markdown(f"<div class='bill-box'><h2>TOTAL: ₹{bill_df['amount'].sum():,.2f}</h2></div>", unsafe_allow_html=True)
-                st.table(bill_df[['date', 'category', 'amount']])
-
-        with tab5:
-            df = get_data("Expenses")
-            if user['role'] != "Admin" and not df.empty: df = df[df['user'] == user['name']]
-            if not df.empty:
-                fig = px.pie(df, values='amount', names='category')
-                st.plotly_chart(fig, use_container_width=True)
-
-    # --- STAFF JOBS (BOSS ONLY) ---
-    elif menu == "🏢 STAFF JOBS":
-        st.title("🏢 STAFF JOB MANAGEMENT")
-        tab1, tab2 = st.tabs(["➕ ADD JOB", "📑 VIEW REPORT"])
-        
-        with tab1:
-            with st.form("job_form"):
-                c1, c2 = st.columns(2)
-                j_date = c1.date_input("Job Date")
-                j_staff = c2.text_input("Staff Name")
-                j_comp = c1.text_input("Company Name")
-                j_type = c2.selectbox("Work Type", ["Full Day", "Half Day", "Overtime"])
-                j_salary = st.number_input("Salary (₹)", min_value=0)
+                    st.plotly_chart(px.bar(df, x='date', y='amount', title="Daily Spend Trend"), use_container_width=True)
                 
-                if st.form_submit_button("SAVE RECORD"):
-                    with st.spinner("Saving..."):
-                        add_row("Jobs", [str(j_date), j_staff, j_comp, j_type, j_salary])
-                        st.success("Saved to Google Sheet!")
-        
-        with tab2:
-            df_jobs = get_data("Jobs")
-            st.dataframe(df_jobs, use_container_width=True)
-            if not df_jobs.empty:
-                csv = df_jobs.to_csv(index=False).encode('utf-8')
-                st.download_button("DOWNLOAD REPORT", csv, "jobs.csv", "text/csv")
+                st.write("---")
+                st.subheader("📥 Export Data")
+                csv = df.to_csv(index=False).encode('utf-8')
+                st.download_button("📥 DOWNLOAD FULL REPORT (CSV)", csv, "wallet_report.csv", "text/csv")
+            else: st.info("No data to analyze.")
 
-    # --- AI HELP ---
-    elif menu == "AI HELP":
-        st.title("AI STUDY PARTNER 🤖")
-        # Google Sheets version mein hum API Key input mangenge
-        key = st.text_input("Enter Gemini API Key", type="password")
-        if key:
-            genai.configure(api_key=key)
-            model = genai.GenerativeModel('gemini-pro')
-            if "messages" not in st.session_state: st.session_state.messages = []
-            for m in st.session_state.messages:
-                with st.chat_message(m["role"]): st.write(m["content"])
-            prompt = st.chat_input("Ask me...")
+        # TAB 4: AUTO BILL
+        with tab4:
+            st.subheader("🧾 Monthly Bill Generator")
+            df = get_data("Expenses")
+            if not df.empty:
+                if user['role'] != 'Admin': df = df[df['user'] == user['username']]
+                
+                df['date'] = pd.to_datetime(df['date']); df['MY'] = df['date'].dt.strftime('%B %Y')
+                sel = st.selectbox("Select Month", df['MY'].unique())
+                
+                bill = df[df['MY'] == sel]
+                total_bill = bill['amount'].sum()
+                
+                st.markdown(f"<div class='bill-box'><h3>Total Bill for {sel}</h3><h1>₹{total_bill:,.0f}</h1></div>", unsafe_allow_html=True)
+                st.table(bill[['date','category','amount','note']])
+            else: st.info("No data available.")
+
+    # --- TASKS ---
+    elif menu == "✅ TASKS":
+        st.title("✅ TO-DO LIST")
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            with st.form("task_f"):
+                td = st.date_input("Deadline"); tt = st.text_input("Task")
+                if st.form_submit_button("ADD"):
+                    add_row("Tasks", [str(td), tt, "Pending", user['username']]); st.success("Added!"); st.rerun()
+        with c2:
+            df = get_data("Tasks")
+            if not df.empty:
+                for i, row in df[df['user'] == user['username']].iterrows():
+                    st.markdown(f"<div style='border-left:5px solid green; padding:10px; background:rgba(255,255,255,0.6); margin:5px; border-radius:5px;'><b>{row['task']}</b></div>", unsafe_allow_html=True)
+
+    # --- NOTEBOOK ---
+    elif menu == "📓 NOTEBOOK":
+        st.title("📓 NOTES")
+        with st.form("note_f"):
+            s = st.text_input("Subject"); c = st.text_area("Content")
+            if st.form_submit_button("SAVE"): add_row("Notebook", [str(datetime.now().date()), s, c, user['username']]); st.success("Saved!")
+        df = get_data("Notebook")
+        if not df.empty:
+            for i, row in df[df['user'] == user['username']].iterrows():
+                with st.expander(f"📌 {row['subject']}"): st.write(row['note'])
+
+    # --- ATTENDANCE ---
+    elif menu == "📊 ATTENDANCE":
+        st.title("📊 ATTENDANCE")
+        with st.form("att_f"):
+            s = st.selectbox("Sub", ["Math","Phy","CS"]); stt = st.radio("Status", ["Present","Absent"])
+            if st.form_submit_button("MARK"): add_row("Attendance", [str(datetime.now().date()), s, stt, user['username']]); st.success("Marked!")
+        df = get_data("Attendance")
+        if not df.empty: st.dataframe(df[df['user'] == user['username']])
+
+    # --- AI TUTOR ---
+    elif menu == "🤖 AI TUTOR":
+        st.title("🤖 CHAT WITH AI")
+        if api_key:
+            genai.configure(api_key=api_key); model = genai.GenerativeModel('gemini-pro')
+            prompt = st.chat_input("Ask...")
             if prompt:
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                st.chat_message("user").write(prompt)
-                res = model.generate_content(prompt)
-                st.session_state.messages.append({"role": "assistant", "content": res.text})
-                st.chat_message("assistant").write(res.text)
+                st.markdown(f"<div style='background:white; padding:10px; border-radius:10px; margin:5px;'><b>You:</b> {prompt}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:#e0e7ff; padding:10px; border-radius:10px; margin:5px;'><b>AI:</b> {model.generate_content(prompt).text}</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
-    if st.session_state.user:
-        main_app()
-    else:
-        login_page()
+    if st.session_state.user: main_app()
+    else: login_page()
