@@ -186,6 +186,7 @@ try:
     api_key = st.secrets["GEMINI_API_KEY"]
 except:
     api_key = st.text_input("🔑 Enter Gemini Key", type="password")
+    
         # MENU
         options = ["DASHBOARD", "🧠 3D AI LAB", "💰 WALLET PRO 10.0", "✅ TASKS", "📓 NOTEBOOK", "📊 ATTENDANCE", "🤖 AI TUTOR"]
         if user['role'] == "Admin": 
