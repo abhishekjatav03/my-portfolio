@@ -17,7 +17,6 @@ st.set_page_config(page_title="💎 ABHISHEK LUXORA PRO 10.0 INDORE EDITION", pa
 # --- 🌟 LIVE INDORE PRO THEME (CSS) ---
 st.markdown("""
 <style>
-    /* LIVE MOVING BACKGROUND ANIMATION */
     @keyframes gradient {
         0% {background-position: 0% 50%;}
         50% {background-position: 100% 50%;}
@@ -28,53 +27,33 @@ st.markdown("""
         background-size: 400% 400%;
         animation: gradient 15s ease infinite;
     }
-    
-    /* GLASSMORPHISM CARDS */
     .glass-card {
         background: rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
         border-radius: 20px;
         border: 1px solid rgba(255, 255, 255, 0.3);
         padding: 25px;
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
         margin-bottom: 20px;
-        transition: transform 0.3s ease;
     }
-    .glass-card:hover { transform: translateY(-5px); }
-
-    /* TEXT STYLING */
-    h1, h2, h3 { color: #1f2937; font-family: 'Helvetica Neue', sans-serif; font-weight: 800; }
-    
-    /* SIDEBAR CARD */
+    h1, h2, h3 { color: #1f2937; font-weight: 800; }
     .xp-card {
         background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
         color: white;
         padding: 20px;
         border-radius: 15px;
         text-align: center;
-        box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
         margin-bottom: 20px;
     }
-    
-    /* BUTTONS */
     .stButton>button {
         background: linear-gradient(90deg, #111827, #374151);
         color: white;
         border-radius: 10px;
-        padding: 10px 25px;
         font-weight: bold;
         border: none;
-        transition: all 0.3s ease;
     }
-    .stButton>button:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-
-    /* ALERTS */
     .best-deal { background: #dcfce7; border-left: 5px solid #22c55e; padding: 15px; border-radius: 10px; color: #14532d; }
     .high-risk { background: #fee2e2; border-left: 5px solid #ef4444; padding: 15px; border-radius: 10px; color: #7f1d1d; }
-    
-    /* TXN ID Badge */
-    .txn-badge { background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 5px; font-size: 0.9em; font-family: monospace; border: 1px solid #7dd3fc; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -86,7 +65,7 @@ def connect_db():
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         if "gcp_service_account" not in st.secrets:
-            st.error("⚠️ Secrets not found! Check Streamlit Settings.")
+            st.error("⚠️ Secrets not found!")
             st.stop()
         creds_dict = dict(st.secrets["gcp_service_account"])
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
@@ -111,7 +90,6 @@ def delete_row_by_id(sheet_name, col_name, id_val):
         return True
     except: return False
 
-# Generic Update Function (Flexible)
 def update_cell_value(sheet_name, id_val, col_index, new_value):
     try:
         ws = connect_db().worksheet(sheet_name)
@@ -180,18 +158,25 @@ def main_app():
         """, unsafe_allow_html=True)
         st.write(f"👤 **{user['name']}**")
         
-        # Auto-Key (Fixed Indentation Here)
+        # --- FIXED AUTO-KEY INDENTATION ---
+        # Ye part ab sahi align hai
+        api_key = None
         try:
-            api_key = st.secrets["GEMINI_API_KEY"]
-            st.success("✅ AI Key Linked")
+            if "GEMINI_API_KEY" in st.secrets:
+                api_key = st.secrets["GEMINI_API_KEY"]
+                st.success("✅ AI Key Linked")
+            else:
+                api_key = st.text_input("🔑 Enter Gemini Key", type="password")
         except:
             api_key = st.text_input("🔑 Enter Gemini Key", type="password")
         
-        # MENU
+        # MENU (Correctly Indented)
         options = ["DASHBOARD", "🧠 3D AI LAB", "💰 WALLET PRO 10.0", "✅ TASKS", "📓 NOTEBOOK", "📊 ATTENDANCE", "🤖 AI TUTOR"]
+        
         if user['role'] == "Admin": 
             options.append("💸 LOAN MANAGER (BOSS)")
             options.append("🏢 STAFF JOBS PRO")
+            
         options.append("🚪 LOGOUT")
         
         menu = st.radio("MENU", options)
@@ -283,7 +268,6 @@ def main_app():
                     jsal = c2.number_input("Salary (₹)", min_value=0)
                     if st.form_submit_button("SAVE JOB"):
                         jid = f"JOB-{random.randint(1000,9999)}"
-                        # Saving: ID, Date, Name, Role, Salary
                         add_row("Jobs", [jid, str(jd), js, jr, jsal])
                         st.success(f"Job Added! ID: {jid}")
 
@@ -303,21 +287,16 @@ def main_app():
                         if st.button("DELETE JOB RECORD"):
                             if delete_row_by_id("Jobs", "id", search_jid): st.warning("Deleted Successfully!"); st.rerun()
                             else: st.error("ID Not Found")
-                
                 st.dataframe(get_data("Jobs"), use_container_width=True)
 
-            # TAB 3: REPORTS
             with tab3:
                 st.subheader("📊 Staff Payroll Report")
                 df_jobs = get_data("Jobs")
                 if not df_jobs.empty:
                     df_jobs['salary'] = pd.to_numeric(df_jobs['salary'], errors='coerce')
                     total_payroll = df_jobs['salary'].sum()
-                    
                     st.markdown(f"<div class='bill-box'><h3>Total Payroll</h3><h1>₹{total_payroll:,.0f}</h1></div>", unsafe_allow_html=True)
-                    st.write("")
                     st.plotly_chart(px.pie(df_jobs, values='salary', names='name', title="Salary Distribution"), use_container_width=True)
-                    
                     csv_jobs = df_jobs.to_csv(index=False).encode('utf-8')
                     st.download_button("📥 DOWNLOAD EXCEL REPORT", csv_jobs, "staff_report.csv", "text/csv")
                 else: st.info("No records found.")
@@ -345,93 +324,59 @@ def main_app():
         st.markdown("<div class='glass-card'><h1>💰 WALLET PRO 10.0</h1><p>SMART LUXURY EDITION</p></div>", unsafe_allow_html=True)
         tab1, tab2, tab3, tab4 = st.tabs(["➕ SMART ADD", "🔍 MANAGE & DELETE", "📊 PRO ANALYSIS", "🧾 AUTO BILL"])
         
-        # TAB 1: SMART ADD
         with tab1:
             with st.form("add_exp"):
                 c1, c2 = st.columns(2)
                 d = c1.date_input("Date")
-                # Dropdown for Category
                 cat = c2.selectbox("Select Category", ["Food", "Travel", "Fees", "Books", "Recharge", "Shopping", "Other"])
                 a = c1.number_input("Amount (₹)", min_value=0)
                 n = c2.text_input("Item Name / Note")
-                
                 if st.form_submit_button("💾 SAVE TRANSACTION"):
                     eid = f"TXN-{random.randint(1000,9999)}"
                     add_row("Expenses", [eid, str(d), cat, a, user['username'], n])
-                    st.success(f"Saved Successfully! Transaction ID: {eid}")
-                    time.sleep(1); st.rerun()
+                    st.success(f"Saved! Transaction ID: {eid}"); time.sleep(1); st.rerun()
 
-        # TAB 2: MANAGE & DELETE
         with tab2:
             st.subheader("Manage Transactions")
-            # Show Table First to see IDs
             df = get_data("Expenses")
             if not df.empty:
                 if user['role'] != 'Admin': df = df[df['user'] == user['username']]
-                
-                # Show Data with ID Badge
                 st.write("📋 **Your Transactions:** (Copy ID to Delete/Update)")
                 st.dataframe(df, use_container_width=True)
-                
                 st.write("---")
-                col1, col2 = st.columns(2)
-                
-                # Delete Section
-                with col1:
-                    st.markdown("<div class='high-risk'>🗑️ DELETE ZONE</div>", unsafe_allow_html=True)
-                    del_id = st.text_input("Enter TXN ID to Delete (e.g. TXN-1234)")
-                    if st.button("DELETE TRANSACTION"):
-                        if delete_row_by_id("Expenses", "id", del_id):
-                            st.warning("Deleted Successfully!"); st.rerun()
-                        else: st.error("ID Not Found")
-                
-                # Update Section
-                with col2:
-                    st.markdown("<div class='best-deal'>🔄 UPDATE ZONE</div>", unsafe_allow_html=True)
-                    up_id = st.text_input("Enter TXN ID to Update")
-                    new_amt = st.number_input("New Amount", min_value=0, key="w_new_amt")
-                    if st.button("UPDATE AMOUNT"):
-                        # Amount is col 4 in Expenses [id, date, cat, amount, user, note]
-                        if update_cell_value("Expenses", up_id, 4, new_amt):
-                            st.success("Updated Successfully!"); st.rerun()
-                        else: st.error("ID Not Found")
-            else: st.info("No transactions found.")
-
-        # TAB 3: PRO ANALYSIS & REPORT
-        with tab3:
-            st.subheader("📊 Spending Intelligence")
-            df = get_data("Expenses")
-            if not df.empty:
-                if user['role'] != 'Admin': df = df[df['user'] == user['username']]
-                
                 c1, c2 = st.columns(2)
                 with c1:
-                    st.plotly_chart(px.pie(df, values='amount', names='category', title="Category Breakdown", hole=0.4), use_container_width=True)
+                    del_id = st.text_input("Enter TXN ID to Delete")
+                    if st.button("DELETE"): 
+                        if delete_row_by_id("Expenses", "id", del_id): st.warning("Deleted!"); st.rerun()
                 with c2:
-                    st.plotly_chart(px.bar(df, x='date', y='amount', title="Daily Spend Trend"), use_container_width=True)
-                
-                st.write("---")
-                st.subheader("📥 Export Data")
-                csv = df.to_csv(index=False).encode('utf-8')
-                st.download_button("📥 DOWNLOAD FULL REPORT (CSV)", csv, "wallet_report.csv", "text/csv")
-            else: st.info("No data to analyze.")
+                    up_id = st.text_input("Enter TXN ID to Update")
+                    n_amt = st.number_input("New Amount", min_value=0)
+                    if st.button("UPDATE"):
+                        if update_cell_value("Expenses", up_id, 4, n_amt): st.success("Updated!"); st.rerun()
+            else: st.info("No transactions found.")
 
-        # TAB 4: AUTO BILL
-        with tab4:
-            st.subheader("🧾 Monthly Bill Generator")
+        with tab3:
             df = get_data("Expenses")
             if not df.empty:
                 if user['role'] != 'Admin': df = df[df['user'] == user['username']]
-                
+                c1, c2 = st.columns(2)
+                with c1: st.plotly_chart(px.pie(df, values='amount', names='category', title="Category Breakdown", hole=0.4), use_container_width=True)
+                with c2: st.plotly_chart(px.bar(df, x='date', y='amount', title="Daily Spend Trend"), use_container_width=True)
+                csv = df.to_csv(index=False).encode('utf-8')
+                st.download_button("📥 DOWNLOAD REPORT", csv, "wallet.csv", "text/csv")
+            else: st.info("No data.")
+
+        with tab4:
+            df = get_data("Expenses")
+            if not df.empty:
+                if user['role'] != 'Admin': df = df[df['user'] == user['username']]
                 df['date'] = pd.to_datetime(df['date']); df['MY'] = df['date'].dt.strftime('%B %Y')
                 sel = st.selectbox("Select Month", df['MY'].unique())
-                
                 bill = df[df['MY'] == sel]
-                total_bill = bill['amount'].sum()
-                
-                st.markdown(f"<div class='bill-box'><h3>Total Bill for {sel}</h3><h1>₹{total_bill:,.0f}</h1></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='bill-box'><h3>Total Bill: ₹{bill['amount'].sum():,.0f}</h3></div>", unsafe_allow_html=True)
                 st.table(bill[['date','category','amount','note']])
-            else: st.info("No data available.")
+            else: st.info("No data.")
 
     # --- TASKS ---
     elif menu == "✅ TASKS":
