@@ -58,7 +58,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. DATABASE FUNCTIONS (AUTO-FIXER ADDED)
+# 2. DATABASE FUNCTIONS (WITH AUTO-HEADER FIX)
 # ==========================================
 @st.cache_resource
 def connect_db():
@@ -74,11 +74,11 @@ def connect_db():
     except Exception as e:
         st.error(f"⚠️ DB Error: {e}"); st.stop()
 
-# Helper to check and fix headers if missing
-def check_headers(worksheet, headers):
+# Auto-Fix Headers function
+def ensure_headers(worksheet, headers):
     try:
         existing = worksheet.row_values(1)
-        if not existing:
+        if not existing: 
             worksheet.append_row(headers)
     except: pass
 
@@ -86,10 +86,10 @@ def get_data(sheet_name):
     try:
         sh = connect_db()
         ws = sh.worksheet(sheet_name)
-        # Auto-Fix Headers if missing
-        if sheet_name == "Expenses": check_headers(ws, ["id", "date", "category", "amount", "user", "note"])
-        elif sheet_name == "Loans": check_headers(ws, ["id", "date", "app_name", "amount", "interest_rate", "note"])
-        elif sheet_name == "Jobs": check_headers(ws, ["id", "date", "name", "role", "salary"])
+        # Check headers based on sheet name
+        if sheet_name == "Expenses": ensure_headers(ws, ["id", "date", "category", "amount", "user", "note"])
+        elif sheet_name == "Loans": ensure_headers(ws, ["id", "date", "app_name", "amount", "interest_rate", "note"])
+        elif sheet_name == "Jobs": ensure_headers(ws, ["id", "date", "name", "role", "salary"])
         
         return pd.DataFrame(ws.get_all_records())
     except: return pd.DataFrame()
@@ -115,25 +115,34 @@ def update_cell_value(sheet_name, id_val, col_index, new_value):
     except: return False
 
 # ==========================================
-# 3. AI ENGINE (FIXED TO GEMINI-PRO)
+# 3. AI ENGINE (MULTI-MODEL FALLBACK)
 # ==========================================
 class ProLearningAI:
     def __init__(self, api_key):
         if api_key:
-            try:
-                genai.configure(api_key=api_key)
-                # Reverted to gemini-pro for stability
-                self.model = genai.GenerativeModel('gemini-pro')
-                self.active = True
-            except:
-                self.active = False
-        else: self.active = False
+            self.api_key = api_key.strip() # Remove spaces
+            genai.configure(api_key=self.api_key)
+            self.active = True
+        else: 
+            self.active = False
 
     def get_lesson(self, topic):
-        if not self.active: return "⚠️ API Key Missing!"
+        if not self.active: return "⚠️ Key Missing! Please enter API Key."
+        
+        # List of models to try in order (Auto-Switch)
+        models_to_try = ['gemini-1.5-flash', 'gemini-pro', 'gemini-1.0-pro']
+        
         prompt = f"Explain '{topic}' simply. Format: Definition, How it works, Fun Fact. Keep it short."
-        try: return self.model.generate_content(prompt).text
-        except Exception as e: return f"⚠️ AI Error: {e}"
+        
+        for model_name in models_to_try:
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt)
+                return response.text # If successful, return and exit loop
+            except Exception:
+                continue # If failed, try next model
+        
+        return "⚠️ AI Error: Google Key is valid, but no models responded. Try generating a new API Key."
 
 # ==========================================
 # 4. LOGIN SYSTEM
@@ -178,7 +187,7 @@ def main_app():
         """, unsafe_allow_html=True)
         st.write(f"👤 **{user['name']}**")
         
-        # Auto-Key
+        # --- ROBUST API KEY CHECK ---
         api_key = None
         if "GEMINI_API_KEY" in st.secrets:
             api_key = st.secrets["GEMINI_API_KEY"]
@@ -281,6 +290,7 @@ def main_app():
                     jsal = c2.number_input("Salary (₹)", min_value=0)
                     if st.form_submit_button("SAVE JOB"):
                         jid = f"JOB-{random.randint(1000,9999)}"
+                        # Saving: ID, Date, Name, Role, Salary
                         add_row("Jobs", [jid, str(jd), js, jr, jsal])
                         st.success(f"Job Added! ID: {jid}")
 
@@ -295,6 +305,7 @@ def main_app():
                             if update_cell_value("Jobs", search_jid, 5, new_sal): st.success("Salary Updated!"); st.rerun()
                             else: st.error("ID Not Found")
                     with col2:
+                        st.write(""); st.write("")
                         if st.button("DELETE JOB RECORD"):
                             if delete_row_by_id("Jobs", "id", search_jid): st.warning("Deleted Successfully!"); st.rerun()
                             else: st.error("ID Not Found")
@@ -321,7 +332,8 @@ def main_app():
             if not topic or not api_key: st.error("Topic or Key missing!")
             else:
                 with st.spinner("⚡ Connecting to 3D Server..."):
-                    ai = ProLearningAI(api_key); expl = ai.get_lesson(topic)
+                    ai = ProLearningAI(api_key)
+                    expl = ai.get_lesson(topic)
                     
                     if "⚠️" in expl: st.error(expl)
                     else:
@@ -355,19 +367,24 @@ def main_app():
             df = get_data("Expenses")
             if not df.empty:
                 if user['role'] != 'Admin': df = df[df['user'] == user['username']]
-                st.write("📋 **Your Transactions:** (Copy ID to Delete/Update)")
+                
+                # Force show ID column for copy-paste
+                st.write("📋 **Copy 'id' from below to Update/Delete:**")
                 st.dataframe(df, use_container_width=True)
+                
                 st.write("---")
                 c1, c2 = st.columns(2)
                 with c1:
                     del_id = st.text_input("Enter TXN ID to Delete")
                     if st.button("DELETE"): 
                         if delete_row_by_id("Expenses", "id", del_id): st.warning("Deleted!"); st.rerun()
+                        else: st.error("ID Not Found")
                 with c2:
                     up_id = st.text_input("Enter TXN ID to Update")
                     n_amt = st.number_input("New Amount", min_value=0)
                     if st.button("UPDATE"):
                         if update_cell_value("Expenses", up_id, 4, n_amt): st.success("Updated!"); st.rerun()
+                        else: st.error("ID Not Found")
             else: st.info("No transactions found.")
 
         with tab3:
@@ -431,7 +448,7 @@ def main_app():
     elif menu == "🤖 AI TUTOR":
         st.title("🤖 CHAT WITH AI")
         if api_key:
-            genai.configure(api_key=api_key); model = genai.GenerativeModel('gemini-pro')
+            genai.configure(api_key=api_key); model = genai.GenerativeModel('gemini-1.5-flash')
             prompt = st.chat_input("Ask...")
             if prompt:
                 st.markdown(f"<div style='background:white; padding:10px; border-radius:10px; margin:5px;'><b>You:</b> {prompt}</div>", unsafe_allow_html=True)
