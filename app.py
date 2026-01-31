@@ -180,13 +180,13 @@ def main_app():
         """, unsafe_allow_html=True)
         st.write(f"👤 **{user['name']}**")
         
-        # Auto-Key
-        # Is line ko dhundhein aur aise badal dein:
-try:
-    api_key = st.secrets["GEMINI_API_KEY"]
-except:
-    api_key = st.text_input("🔑 Enter Gemini Key", type="password")
-    
+        # Auto-Key (Fixed Indentation Here)
+        try:
+            api_key = st.secrets["GEMINI_API_KEY"]
+            st.success("✅ AI Key Linked")
+        except:
+            api_key = st.text_input("🔑 Enter Gemini Key", type="password")
+        
         # MENU
         options = ["DASHBOARD", "🧠 3D AI LAB", "💰 WALLET PRO 10.0", "✅ TASKS", "📓 NOTEBOOK", "📊 ATTENDANCE", "🤖 AI TUTOR"]
         if user['role'] == "Admin": 
