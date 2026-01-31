@@ -54,6 +54,7 @@ st.markdown("""
     }
     .best-deal { background: #dcfce7; border-left: 5px solid #22c55e; padding: 15px; border-radius: 10px; color: #14532d; }
     .high-risk { background: #fee2e2; border-left: 5px solid #ef4444; padding: 15px; border-radius: 10px; color: #7f1d1d; }
+    .txn-badge { background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 5px; font-size: 0.9em; font-family: monospace; border: 1px solid #7dd3fc; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -99,21 +100,38 @@ def update_cell_value(sheet_name, id_val, col_index, new_value):
     except: return False
 
 # ==========================================
-# 3. AI ENGINE
+# 3. AI ENGINE (UPDATED TO FLASH MODEL)
 # ==========================================
 class ProLearningAI:
     def __init__(self, api_key):
         if api_key:
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('gemini-pro')
-            self.active = True
-        else: self.active = False
+            try:
+                genai.configure(api_key=api_key)
+                # Updated to the latest stable model
+                self.model = genai.GenerativeModel('gemini-1.5-flash')
+                self.active = True
+            except:
+                self.active = False
+        else: 
+            self.active = False
 
     def get_lesson(self, topic):
-        if not self.active: return "⚠️ API Key Missing!"
-        prompt = f"Explain '{topic}' simply. Format: Definition, How it works, Fun Fact. Keep it short."
-        try: return self.model.generate_content(prompt).text
-        except: return "⚠️ AI Error."
+        if not self.active: return "⚠️ Key Missing! Please enter API Key."
+        
+        prompt = f"""
+        Explain '{topic}' simply for a student.
+        Format:
+        1. **Definition** (1 line)
+        2. **How it works** (Bullet points)
+        3. **Fun Fact**
+        Keep it short and engaging.
+        """
+        try:
+            response = self.model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            # This will show exactly WHY it failed
+            return f"⚠️ Google Error: {str(e)}"
 
 # ==========================================
 # 4. LOGIN SYSTEM
@@ -158,25 +176,19 @@ def main_app():
         """, unsafe_allow_html=True)
         st.write(f"👤 **{user['name']}**")
         
-        # --- FIXED AUTO-KEY INDENTATION ---
-        # Ye part ab sahi align hai
+        # --- ROBUST API KEY CHECK ---
         api_key = None
-        try:
-            if "GEMINI_API_KEY" in st.secrets:
-                api_key = st.secrets["GEMINI_API_KEY"]
-                st.success("✅ AI Key Linked")
-            else:
-                api_key = st.text_input("🔑 Enter Gemini Key", type="password")
-        except:
-            api_key = st.text_input("🔑 Enter Gemini Key", type="password")
+        if "GEMINI_API_KEY" in st.secrets:
+            api_key = st.secrets["GEMINI_API_KEY"]
+            st.success("✅ AI Connected")
+        else:
+            api_key = st.text_input("🔑 Enter Gemini Key", type="password", help="Paste your AIza... key here")
         
-        # MENU (Correctly Indented)
+        # MENU
         options = ["DASHBOARD", "🧠 3D AI LAB", "💰 WALLET PRO 10.0", "✅ TASKS", "📓 NOTEBOOK", "📊 ATTENDANCE", "🤖 AI TUTOR"]
-        
         if user['role'] == "Admin": 
             options.append("💸 LOAN MANAGER (BOSS)")
             options.append("🏢 STAFF JOBS PRO")
-            
         options.append("🚪 LOGOUT")
         
         menu = st.radio("MENU", options)
@@ -258,7 +270,6 @@ def main_app():
             st.markdown("<div class='glass-card'><h1>🏢 STAFF MANAGEMENT PRO</h1></div>", unsafe_allow_html=True)
             tab1, tab2, tab3 = st.tabs(["➕ ADD JOB", "🔍 UPDATE/DELETE", "📊 SMART REPORTS"])
             
-            # TAB 1: ADD
             with tab1:
                 with st.form("job_form"):
                     c1, c2 = st.columns(2)
@@ -271,7 +282,6 @@ def main_app():
                         add_row("Jobs", [jid, str(jd), js, jr, jsal])
                         st.success(f"Job Added! ID: {jid}")
 
-            # TAB 2: MANAGE
             with tab2:
                 st.subheader("Manage Staff Records")
                 search_jid = st.text_input("Enter Job ID (JOB-....)")
@@ -283,7 +293,6 @@ def main_app():
                             if update_cell_value("Jobs", search_jid, 5, new_sal): st.success("Salary Updated!"); st.rerun()
                             else: st.error("ID Not Found")
                     with col2:
-                        st.write(""); st.write("")
                         if st.button("DELETE JOB RECORD"):
                             if delete_row_by_id("Jobs", "id", search_jid): st.warning("Deleted Successfully!"); st.rerun()
                             else: st.error("ID Not Found")
@@ -310,14 +319,19 @@ def main_app():
             if not topic or not api_key: st.error("Topic or Key missing!")
             else:
                 with st.spinner("⚡ Connecting to 3D Server..."):
-                    ai = ProLearningAI(api_key); expl = ai.get_lesson(topic)
-                    st.session_state.xp += 50
-                    c1, c2 = st.columns([1, 1.5])
-                    with c1: st.markdown(f"<div class='glass-card'><h3>📘 {topic.upper()}</h3>{expl}</div>", unsafe_allow_html=True); st.success("+50 XP!")
-                    with c2:
-                        st.markdown("<div class='glass-card'><h3>🎥 LIVE 3D VIEW</h3>", unsafe_allow_html=True)
-                        components.iframe(src=f"https://sketchfab.com/search?q={topic}&type=models", height=500, scrolling=True)
-                        st.markdown("</div>", unsafe_allow_html=True)
+                    ai = ProLearningAI(api_key)
+                    expl = ai.get_lesson(topic)
+                    
+                    if "⚠️" in expl: # If error returned
+                        st.error(expl)
+                    else:
+                        st.session_state.xp += 50
+                        c1, c2 = st.columns([1, 1.5])
+                        with c1: st.markdown(f"<div class='glass-card'><h3>📘 {topic.upper()}</h3>{expl}</div>", unsafe_allow_html=True); st.success("+50 XP!")
+                        with c2:
+                            st.markdown("<div class='glass-card'><h3>🎥 LIVE 3D VIEW</h3>", unsafe_allow_html=True)
+                            components.iframe(src=f"https://sketchfab.com/search?q={topic}&type=models", height=500, scrolling=True)
+                            st.markdown("</div>", unsafe_allow_html=True)
 
     # --- 💰 WALLET PRO 10.0 (LUXURY EDITION) ---
     elif menu == "💰 WALLET PRO 10.0":
@@ -334,7 +348,8 @@ def main_app():
                 if st.form_submit_button("💾 SAVE TRANSACTION"):
                     eid = f"TXN-{random.randint(1000,9999)}"
                     add_row("Expenses", [eid, str(d), cat, a, user['username'], n])
-                    st.success(f"Saved! Transaction ID: {eid}"); time.sleep(1); st.rerun()
+                    st.success(f"Saved Successfully! Transaction ID: {eid}")
+                    time.sleep(1); st.rerun()
 
         with tab2:
             st.subheader("Manage Transactions")
@@ -344,19 +359,24 @@ def main_app():
                 st.write("📋 **Your Transactions:** (Copy ID to Delete/Update)")
                 st.dataframe(df, use_container_width=True)
                 st.write("---")
-                c1, c2 = st.columns(2)
-                with c1:
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("<div class='high-risk'>🗑️ DELETE ZONE</div>", unsafe_allow_html=True)
                     del_id = st.text_input("Enter TXN ID to Delete")
-                    if st.button("DELETE"): 
-                        if delete_row_by_id("Expenses", "id", del_id): st.warning("Deleted!"); st.rerun()
-                with c2:
+                    if st.button("DELETE TRANSACTION"):
+                        if delete_row_by_id("Expenses", "id", del_id): st.warning("Deleted Successfully!"); st.rerun()
+                        else: st.error("ID Not Found")
+                with col2:
+                    st.markdown("<div class='best-deal'>🔄 UPDATE ZONE</div>", unsafe_allow_html=True)
                     up_id = st.text_input("Enter TXN ID to Update")
-                    n_amt = st.number_input("New Amount", min_value=0)
-                    if st.button("UPDATE"):
-                        if update_cell_value("Expenses", up_id, 4, n_amt): st.success("Updated!"); st.rerun()
+                    new_amt = st.number_input("New Amount", min_value=0, key="w_new_amt")
+                    if st.button("UPDATE AMOUNT"):
+                        if update_cell_value("Expenses", up_id, 4, new_amt): st.success("Updated Successfully!"); st.rerun()
+                        else: st.error("ID Not Found")
             else: st.info("No transactions found.")
 
         with tab3:
+            st.subheader("📊 Spending Intelligence")
             df = get_data("Expenses")
             if not df.empty:
                 if user['role'] != 'Admin': df = df[df['user'] == user['username']]
@@ -364,19 +384,21 @@ def main_app():
                 with c1: st.plotly_chart(px.pie(df, values='amount', names='category', title="Category Breakdown", hole=0.4), use_container_width=True)
                 with c2: st.plotly_chart(px.bar(df, x='date', y='amount', title="Daily Spend Trend"), use_container_width=True)
                 csv = df.to_csv(index=False).encode('utf-8')
-                st.download_button("📥 DOWNLOAD REPORT", csv, "wallet.csv", "text/csv")
-            else: st.info("No data.")
+                st.download_button("📥 DOWNLOAD FULL REPORT (CSV)", csv, "wallet_report.csv", "text/csv")
+            else: st.info("No data to analyze.")
 
         with tab4:
+            st.subheader("🧾 Monthly Bill Generator")
             df = get_data("Expenses")
             if not df.empty:
                 if user['role'] != 'Admin': df = df[df['user'] == user['username']]
                 df['date'] = pd.to_datetime(df['date']); df['MY'] = df['date'].dt.strftime('%B %Y')
                 sel = st.selectbox("Select Month", df['MY'].unique())
                 bill = df[df['MY'] == sel]
-                st.markdown(f"<div class='bill-box'><h3>Total Bill: ₹{bill['amount'].sum():,.0f}</h3></div>", unsafe_allow_html=True)
+                total_bill = bill['amount'].sum()
+                st.markdown(f"<div class='bill-box'><h3>Total Bill for {sel}</h3><h1>₹{total_bill:,.0f}</h1></div>", unsafe_allow_html=True)
                 st.table(bill[['date','category','amount','note']])
-            else: st.info("No data.")
+            else: st.info("No data available.")
 
     # --- TASKS ---
     elif menu == "✅ TASKS":
@@ -417,11 +439,15 @@ def main_app():
     elif menu == "🤖 AI TUTOR":
         st.title("🤖 CHAT WITH AI")
         if api_key:
-            genai.configure(api_key=api_key); model = genai.GenerativeModel('gemini-pro')
+            genai.configure(api_key=api_key); model = genai.GenerativeModel('gemini-1.5-flash')
             prompt = st.chat_input("Ask...")
             if prompt:
                 st.markdown(f"<div style='background:white; padding:10px; border-radius:10px; margin:5px;'><b>You:</b> {prompt}</div>", unsafe_allow_html=True)
-                st.markdown(f"<div style='background:#e0e7ff; padding:10px; border-radius:10px; margin:5px;'><b>AI:</b> {model.generate_content(prompt).text}</div>", unsafe_allow_html=True)
+                try:
+                    res = model.generate_content(prompt).text
+                    st.markdown(f"<div style='background:#e0e7ff; padding:10px; border-radius:10px; margin:5px;'><b>AI:</b> {res}</div>", unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
 if __name__ == "__main__":
     if st.session_state.user: main_app()
